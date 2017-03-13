@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block body %}
+<html>
+  <head>
+    <link rel="stylesheet" 
+	  href="{{ url_for('static', filename='style.css') }}">   
+    <title>{{ title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+  <h2>{{ title }}</h2>
+    {{ commentary }}
+
+  
+  {% if event_id %}
+  <hr>
+  <!-- Sentry JS SDK 2.1.+ required -->
+  <script src="https://cdn.ravenjs.com/2.3.0/raven.min.js"></script>
+  <script>
+    Raven.showReportDialog({
+    eventId: '{{ event_id }}',
+    dsn: '{{ public_dsn }}'
+    });
+  </script>
+  {% endif %}
+  
+  </body>
+</html>
+{% endblock %}

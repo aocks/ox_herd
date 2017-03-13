@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block body %}
+<html>
+  <head>
+    <title>Login</title>
+    <style type="text/css">
+ <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">   
+    </style>    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style type="text/css">
+      .container {
+        max-width: 500px;
+        padding-top: 100px;
+      }
+    </style>
+  </head>
+  <h2>Login</h2>
+  {% if error %}<p class="error"><strong>Error:</strong> {{ error }}{% endif %}
+  <form method="post">
+    <dl>
+      <dt>Username:</dt><dd><input type="text" name="username"></dd>
+      <dt>Password:</dt><dd><input type="password" name="password"></dd>
+      <dd><input type="submit" value="Login">
+    </dl>
+  </form>
+</html>
+{% endblock %}

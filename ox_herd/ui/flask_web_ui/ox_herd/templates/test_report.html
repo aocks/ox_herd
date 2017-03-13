@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="w3-light-grey w3-margin-bottom">
+  <div>
+    <TABLE cellpadding="10">
+      <TH>Test report</TH>
+      <TH>Failed</TH>
+      <TH>Passed</TH>
+      <TH>Duration</TH>
+      <TH>Created at</TH>
+      <TR>
+	<TD>{{ test_name }}</TD>
+	<TD>{{ test_data['summary']['failed'] }}</TD>
+	<TD>{{ test_data['summary']['passed'] }}</TD>
+	<TD>{{ '%.2f' % test_data['summary']['duration'] }}</TD>
+	<TD>{{ test_data['created_at'] }}</TD>
+      </TR>
+    </TABLE>
+  </div>
+</div>
+
+<div class="w3-row-padding" style="max-width:1400px">
+  <div class="w3-container w3-light-grey">
+    <details open>
+      <summary>
+	<b>Failures</b>
+      </summary>
+      {% set failure_num = 0 %}	
+      {% for item in test_data['tests'] %}
+      {% if item.outcome == 'failed' %}
+      <details>
+	{% set failure_num = failure_num + 1 %}
+	<summary>{{('%i'%failure_num).zfill(3)}} -- {{ item.name }}</summary>
+	{% for piece in ['setup', 'call', 'teardown'] %}
+	{% if item[piece].outcome == 'failed' %}
+	<br><PRE>{{ item[piece].longrepr }}</PRE><br>
+	{% endif %}
+	{% endfor %}
+      </details>
+      {% else %}
+      {% endif %}
+      {% endfor %}
+    </details>
+  </div>
+</div>
+
+{% endblock %}

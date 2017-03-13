@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="w3-light-grey w3-margin-bottom">
+  <h2>Scheduled Tests:</h2>
+  {% for item in test_schedule %}
+  <details>
+    <summary> {{ item.name }} : {{ item.schedule }} </summary>
+    <UL>
+      <LI>URL : <A HREF="{{item.url}}">{{item.url}}</A></LI>
+    </UL>
+  </details>
+  {% endfor %}
+</div>
+
+
+{% endblock %}

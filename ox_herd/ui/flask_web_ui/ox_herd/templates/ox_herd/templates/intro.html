@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block body %}
+
+{% set title = 'Ox Herd' %}
+
+<div class="w3-container w3-teal">
+  <h2>Ox Herd</h2>
+  <p>
+    Welcome to Ox Herd the user interface and administration page.
+  </p>
+</div>
+<div class="w3-container w3-row-padding">  
+  {% for cmd_grp_name, cmd_grp_html in commands.items() %}
+  <div class="w3-third">      
+    {{ cmd_grp_html }}
+  </div>
+  {% endfor %}
+</div>
+<hr>
+
+{% endblock %}
