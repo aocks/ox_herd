@@ -35,6 +35,19 @@ def prepare_parser(parser=None):
         'and then deleted. If you do manually specify a path, then that\n'
         'path will be used and *NOT* deleted (which can be useful\n'
         'for debugging).'))
+    parser.add_argument('--timeout', type=int, default=900, help=(
+        'Timeout in seconds to allow for tasks.'))
+    parser.add_argument('--cron_string', help=(
+        'Cron format string for when to schedule the task.\n'
+        'For example, "5 1 * * 3" would be every Wednesday at 1:05 am.\n'
+        'This is used for --manager choices such as rq which support cron\n'
+        'scheduling. NOTE: cron_string should have 5 fields. If you try to\n'
+        'use the non-standard extended cron format with 6 fields, you may get\n'
+        'unexpected results.'))
+    parser.add_argument('-p', '--pytest', action='append', help=(
+        'Provide the given argument to pytest. For example, if you did\n'
+        '-p=--ignore -p=/path/to/setup.py then you could pass an ignore\n'
+        'flag to pytest.'))
 
     return parser
 
