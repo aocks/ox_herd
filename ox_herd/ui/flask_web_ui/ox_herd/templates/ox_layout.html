@@ -2,7 +2,18 @@
 {% block footer %}
 <div class="footer w3-row-padding">
   <hr>
-  <A HREF="{{url_for('ox_herd.index')}}">Ox Herd</A>
+  <TABLE cellpadding="12"><TR>
+      <TH>
+	<A HREF="{{url_for('ox_herd.index')}}">Ox Herd</A>
+      </TH>
+      <TH>
+	<A HREF="{{url_for('ox_herd.show_scheduled')}}">Show Scheduled</A>
+      </TH>
+      <TH>
+	<A HREF="{{url_for('ox_herd.list_tests')}}">List Tests</A>
+      </TH>
+  </TR></TABLE>
+      
 </div>
 {{ super() }}
 {% endblock %}
