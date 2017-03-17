@@ -89,7 +89,7 @@ def index():
         (name, Markup('<A HREF="%s">%s</A>' % (
             url_for('ox_herd.%s' % name), name))) for name in [
                 'show_test', 'list_tests', 'show_scheduled', 'cancel_job',
-                'schedule_test', 'show_job']])
+                'schedule_job', 'show_job']])
 
     return render_template('ox_herd/templates/intro.html', commands=commands)
 
@@ -168,14 +168,17 @@ def cancel_job():
         cancel = scheduling.SimpleScheduler.cancel_job(jid)
         return render_template('cancel_job.html', jid=jid, cancel=cancel)
 
-@OX_HERD_BP.route('/schedule_test', methods=['GET', 'POST'])
+@OX_HERD_BP.route('/schedule_job', methods=['GET', 'POST'])
 @login_required
-def schedule_test():
-    my_form = forms.SchedTestForm()
+def schedule_job():
+
     jid = request.args.get('jid', None)
-    if jid:
+    if jid and request.method == 'GET':
         my_args = scheduling.SimpleScheduler.jobid_to_argrec(jid)
-        my_form.populate_obj(my_args)
+        my_form = forms.SchedJobForm(obj=my_args)
+        my_form.name.data += '_copy'
+    else:
+        my_form = forms.SchedJobForm()
 
     if my_form.validate_on_submit():
         info = forms.GenericRecord()
