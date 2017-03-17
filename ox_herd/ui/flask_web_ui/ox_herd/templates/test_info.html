@@ -1,13 +1,25 @@
 
 <details>
   <summary>{{ item.name }} : {{ item.manager }} : {{ item.schedule }} </summary>
+  <TABLE cellpadding="10"><TR>
+	<TH>
+	  <A HREF="{{url_for('ox_herd.launch_job')+'?jid=' + item.jid}}">
+	    Launch Job Copy</A>
+	</TH>
+	<TH>
+	  <A HREF="{{url_for('ox_herd.schedule_job')+'?jid=' + item.jid}}">
+	    Edit Job Copy</A>
+	</TH>
+	{% if item.cron_string %}    
+	<TH>
+	  <A HREF="{{url_for('ox_herd.cancel_job')+'?jid=' + item.jid}}">
+	    Cancel Job</A>
+	</TH>
+	{% endif %}
+  </TR></TABLE>
   <UL>
-    <LI><A HREF="{{url_for('ox_herd.launch_job')+'?jid=' + item.jid}}">
-	   Launch Job Copy</A></LI>
     <LI>URL : <A HREF="{{item.url}}">{{item.url}}</A></LI>
-    {% if item.cron_string %}
-    <LI> <A HREF="{{url_for('ox_herd.cancel_job')+'?jid=' + item.jid}}">
-	Cancel</A> </LI>
+    {% if item.cron_string %}    
     <LI> Cron string : {{item.cron_string}}</LI>
     {% endif %}
     {% if item.pytest %}
