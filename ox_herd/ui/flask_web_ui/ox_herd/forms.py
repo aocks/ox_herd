@@ -10,13 +10,9 @@ from wtforms import (BooleanField, DateField, DateTimeField, StringField,
 class GenericRecord:
     pass
 
-class SchedTestForm(FlaskForm):
-    """The event_scan command scans a ticker list for upcoming events.
+class SchedJobForm(FlaskForm):
+    """Use this form to enter parameters for a new job to schedule.
 
-Usually, you should run the get_tickers command first to download tickers
-of interest for the portfolio. The most recent ticker file will then be
-the default file selected by this command. If desired, you can also
-provide your own file.
     """
 
     url = StringField('url', [], description=(
