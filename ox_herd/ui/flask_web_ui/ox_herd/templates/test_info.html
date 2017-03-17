@@ -1,0 +1,23 @@
+
+<details>
+  <summary>{{ item.name }} : {{ item.manager }} : {{ item.schedule }} </summary>
+  <UL>
+    <LI><A HREF="{{url_for('ox_herd.launch_job')+'?jid=' + item.jid}}">
+	   Launch Job Copy</A></LI>
+    <LI>URL : <A HREF="{{item.url}}">{{item.url}}</A></LI>
+    {% if item.cron_string %}
+    <LI> <A HREF="{{url_for('ox_herd.cancel_job')+'?jid=' + item.jid}}">
+	Cancel</A> </LI>
+    <LI> Cron string : {{item.cron_string}}</LI>
+    {% endif %}
+    {% if item.pytest %}
+    <LI> pytest args : 
+      <PRE>{{ item.pytest }}</PRE>
+    </LI>
+    {% endif %}
+    {% if item.timeout %}
+    <LI> timeout : {{ item.timeout }} </LI>
+    {% endif %}
+    <LI> job id : {{item.jid}} </LI>
+  </UL>
+</details>
