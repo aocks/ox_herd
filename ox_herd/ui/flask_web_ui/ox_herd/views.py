@@ -172,7 +172,11 @@ def cancel_job():
 @login_required
 def schedule_test():
     my_form = forms.SchedTestForm()
-    
+    jid = request.args.get('jid', None)
+    if jid:
+        my_args = scheduling.SimpleScheduler.jobid_to_argrec(jid)
+        my_form.populate_obj(my_args)
+
     if my_form.validate_on_submit():
         info = forms.GenericRecord()
         my_form.populate_obj(info)

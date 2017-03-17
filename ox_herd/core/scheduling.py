@@ -90,9 +90,21 @@ class SimpleScheduler(object):
         scheduler = rq_scheduler.Scheduler(connection=Redis())
         return scheduler.cancel(job)
 
-    @staticmethod
-    def launch_job(job_id):
+    @classmethod
+    def launch_job(cls, job_id):
         logging.warning('Preparing to launch job with id %s', str(job_id))
+        import rq_scheduler
+        from redis import Redis
+        scheduler = rq_scheduler.Scheduler(connection=Redis())
+        my_args = cls.jobid_to_argrec(job_id)
+        task = TestingTask()
+        new_job = scheduler.enqueue_in(
+            datetime.timedelta(0), func=task, ox_test_args=my_args)
+        logging.warning('Launching new job with args' + str(my_args))
+        return new_job
+
+    @staticmethod
+    def jobid_to_argrec(job_id):
         import rq_scheduler
         from rq.job import Job
         from redis import Redis
@@ -100,12 +112,9 @@ class SimpleScheduler(object):
         old_job = Job.fetch(job_id, connection=scheduler.connection)
         ox_test_args = old_job.kwargs['ox_test_args']
         my_args = copy.deepcopy(ox_test_args)
-        task = TestingTask()
-        new_job = scheduler.enqueue_in(
-            datetime.timedelta(0), func=task, ox_test_args=my_args)
-        logging.warning('Launching new job with args' + str(my_args))
-        return new_job
-        
+        return my_args
+
+
 
     @staticmethod
     def find_job(target_job):
