@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="w3-light-grey w3-margin-bottom">
+  <h2>Cancel Job</h2>
+  {% if jid %}
+Cancelled job {{ jid }} with result:
+<PRE>
+{{ cancel }}
+</PRE>
+  {% else %}
+  Enter job id to cancel:
+  <form action={{url_for('ox_herd.cancel_job')}} method="get">
+    <div>
+      <div class="tooltip"> job id: <span class="tooltiptext">
+	  ID of job to cancel.
+      </span>
+      </div>
+      <input type="text" name="jid">
+      </div>
+  </form>
+ {% endif %}
+
+{% endblock %}
