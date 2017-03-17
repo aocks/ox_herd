@@ -22,22 +22,6 @@ def d_to_nt(dictionary):
     "Convert dictionaryt to namedtuple"
     return namedtuple('GenericDict', dictionary.keys())(**dictionary)
 
-@OX_HERD_BP.route('/')
-@login_required
-def ox_herd():
-    """Main page for ox_herd.
-
-    Usually will not be true root since blueprint will
-    be registered with url_prefix.
-    """
-    commands = collections.OrderedDict([
-        (name, Markup('<A HREF="%s">%s</A>' % (
-            url_for('ox_herd.%s' % name), name))) for name in [
-                'show_test', 'list_tests', 'show_scheduled', 'cancel_job',
-                'schedule_test', 'show_job']])
-
-    return render_template('ox_herd/templates/intro.html', commands=commands)
-
 def reprocess_master(keep_recent=16):
     result = {'tests' : []}
     root = cache_utils.get_path('test_results')
@@ -91,7 +75,24 @@ def delete_old_data(old_data):
     for old_time, old_file in old_data:
         logging.debug('Deleting old file %s.', old_file)
         os.remove(old_file)
-    
+
+@OX_HERD_BP.route('/')
+@OX_HERD_BP.route('/index')
+@login_required
+def index():
+    """Main page for ox_herd.
+
+    Usually will not be true root since blueprint will
+    be registered with url_prefix.
+    """
+    commands = collections.OrderedDict([
+        (name, Markup('<A HREF="%s">%s</A>' % (
+            url_for('ox_herd.%s' % name), name))) for name in [
+                'show_test', 'list_tests', 'show_scheduled', 'cancel_job',
+                'schedule_test', 'show_job']])
+
+    return render_template('ox_herd/templates/intro.html', commands=commands)
+
 
 @OX_HERD_BP.route('/list_tests')
 @login_required
@@ -180,7 +181,7 @@ def schedule_test():
             url_for('ox_herd.show_job'), job.id))
         
     return render_template(
-        'generic_wtf.html', form=my_form, title='Schedule Test',
+        'ox_wtf.html', form=my_form, title='Schedule Test',
         intro=Markup(markdown.markdown(my_form.__doc__, extensions=[
             'fenced_code', 'tables'])))
     
