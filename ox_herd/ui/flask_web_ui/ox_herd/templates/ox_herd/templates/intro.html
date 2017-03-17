@@ -10,11 +10,13 @@
   </p>
 </div>
 <div class="w3-container w3-row-padding">  
+  <div class="w3-third">
   {% for cmd_grp_name, cmd_grp_html in commands.items() %}
-  <div class="w3-third">      
-    {{ cmd_grp_html }}
-  </div>
+    <UL>
+      <LI>{{ cmd_grp_html }}</LI>
+    </UL>
   {% endfor %}
+  </div>
 </div>
 <hr>
 
