@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="w3-light-grey w3-margin-bottom">
+  <h2>Launch Job</h2>
+  {% if jid %}
+Launched new job with id {{ jid }}.
+  {% else %}
+  Enter job id to launch:
+  <form action={{url_for('ox_herd.launch_job')}} method="get">
+    <div>
+      <div class="tooltip"> job id: <span class="tooltiptext">
+	  ID of job to launch.
+      </span>
+      </div>
+      <input type="text" name="jid">
+      </div>
+  </form>
+ {% endif %}
+
+{% endblock %}
