@@ -9,6 +9,7 @@ import logging
 import os
 
 from flask import Flask, redirect, url_for
+from flask.ext.login import LoginManager, UserMixin, login_required
 
 DEFAULT_PORT = 4111
 
@@ -58,16 +59,21 @@ def _serve(args):
         logging.warning('Host = %s. When host != 0.0.0.0 non-local connections '
                         '\nwill be *IGNORED*. Only use for testing.', args.host)
 
+    app = Flask('ox_herd')
+
     settings = {'SECRET_KEY' : os.urandom(128),
                 'USERNAME' : 'admin', 'DEBUG' : True}
 
-    app = Flask('ox_herd')
     app.config.from_object(__name__)
     app.config.update(settings)
 
     from ox_herd.ui.flask_web_ui import ox_herd
     from ox_herd.ui.flask_web_ui.ox_herd import views
     app.register_blueprint(ox_herd.OX_HERD_BP, url_prefix='/ox_herd')
+
+    if settings['DEBUG']:
+        from ox_herd.core import login_stub
+        app.register_blueprint(login_stub.LOGIN_STUB_BP)
 
     @app.route("/")
     def redirect_to_ox_herd():
@@ -78,6 +84,6 @@ def _serve(args):
             debug=True, #FIXME: debug=args.debug,
             port=int(args.port))
 
-    
+
 if __name__ == '__main__':
     run()
