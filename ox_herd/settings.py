@@ -7,3 +7,7 @@ STUB_USER_DB = {
     'test' : 'test_pw'
     }
 
+# Space separated list of queue names to show in showing scheduled tests.
+# Can be changed by your own software after importing settings if you like.
+QUEUE_NAMES = 'default'
+
