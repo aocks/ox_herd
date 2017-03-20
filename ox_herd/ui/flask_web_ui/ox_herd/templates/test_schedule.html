@@ -1,12 +1,16 @@
 {% extends "ox_layout.html" %}
 {% block body %}
 
+{% for qname in queue_names %}
 <div class="w3-light-grey w3-margin-bottom">
-  <h2>Scheduled Tests:</h2>
+  <h2>Scheduled Tests for queue {{ qname }}:</h2>
   {% for item in test_schedule %}
+  {% if item.queue_name == qname %}
   {% include 'test_info.html' %}
+  {% endif %}
   {% endfor %}
 </div>
+{% endfor %}
 
 
 {% endblock %}
