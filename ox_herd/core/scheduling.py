@@ -106,7 +106,7 @@ class SimpleScheduler(object):
         # but should look at scheduler.queue_name; assert to verify that
         new_job = scheduler.enqueue_in(
             datetime.timedelta(0), func=task, ox_test_args=my_args)
-        assert job.origin == queue_name
+        assert new_job.origin == queue_name
         logging.warning('Launching new job with args' + str(my_args))
         return new_job
 
