@@ -22,6 +22,11 @@ class SchedJobForm(FlaskForm):
     name = StringField('name', [], default='test_', description=(
         'String name for the job you are going to schedule.'))
 
+    queue_name = StringField('name', [], default='efault', description=(
+        'String name for the job queue that the task will use.\n'
+        'Usually this is "default". If you use other names, you should\n'
+        'make sure you have the appropriate workers running for that queue.'))
+
     manager = RadioField(
         'manager', default='rq', choices=[(name, name) for name in [
             'instant', 'rq']], description=(
