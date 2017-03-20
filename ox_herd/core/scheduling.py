@@ -75,11 +75,13 @@ class SimpleScheduler(object):
                 prob, 'Install rq_scheduler and redis to use this manager.')
             logging.error(msg)
             raise
-        scheduler = rq_scheduler.Scheduler(connection=Redis())
+        queue_name = args.queue_name
+        scheduler = rq_scheduler.Scheduler(
+            connection=Redis(), queue_name=queue_name)
         if args.cron_string:
             return scheduler.cron(
                 args.cron_string, func=task, timeout=args.timeout,
-                kwargs={'ox_test_args' : args})
+                kwargs={'ox_test_args' : args}, queue_name=queue_name)
         else:
             raise ValueError('No scheduling method for rq task.')
 
@@ -95,11 +97,16 @@ class SimpleScheduler(object):
         logging.warning('Preparing to launch job with id %s', str(job_id))
         import rq_scheduler
         from redis import Redis
-        scheduler = rq_scheduler.Scheduler(connection=Redis())
         my_args = cls.jobid_to_argrec(job_id)
         task = TestingTask()
+        queue_name = my_args.queue_name
+        scheduler = rq_scheduler.Scheduler(
+            connection=Redis(), queue_name=queue_name)
+        # RQ schedular kind of lame in not accepting queue_name to enqueue_in
+        # but should look at scheduler.queue_name; assert to verify that
         new_job = scheduler.enqueue_in(
             datetime.timedelta(0), func=task, ox_test_args=my_args)
+        assert job.origin == queue_name
         logging.warning('Launching new job with args' + str(my_args))
         return new_job
 
