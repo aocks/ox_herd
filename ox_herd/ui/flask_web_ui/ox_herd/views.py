@@ -16,6 +16,7 @@ from ox_herd.file_cache import cache_utils
 from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
 from ox_herd.core import scheduling
 from ox_herd.ui.flask_web_ui.ox_herd import forms
+from ox_herd import settings
 
 from collections import namedtuple
 def d_to_nt(dictionary):
@@ -129,8 +130,11 @@ def show_test():
 @OX_HERD_BP.route('/show_scheduled')
 @login_required
 def show_scheduled():
+    queue_names = request.args.get('queue_names', settings.QUEUE_NAMES)
+    queue_names = list(sorted(queue_names.split()))
     my_tests = scheduling.SimpleScheduler.get_scheduled_tests()
-    return render_template('test_schedule.html', test_schedule=my_tests)
+    return render_template('test_schedule.html', test_schedule=my_tests,
+                           queue_names=queue_names)
 
 @OX_HERD_BP.route('/show_job')
 @login_required
