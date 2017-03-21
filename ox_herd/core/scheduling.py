@@ -10,11 +10,34 @@ import datetime
 import shlex
 import urllib.parse
 
+try: # try to import rq_scheduler and redis but allow other modes if fail
+    from rq.job import Job
+    from rq import get_failed_queue, Queue
+    import rq_scheduler
+    from redis import Redis
+except Exception as problem:
+    msg = 'Could not import rq_scheduler and redis because %s.\n%s' % (
+        str(problem), 'Continue with non-rq options.')
+    logging.error(msg)
+
 import pytest
 
 from ox_herd.file_cache import cache_utils
 
-class TestingTask(object):
+class OxHerdArgs(object):
+
+    def __init__(self, name):
+        FIXME
+
+class OxHerdTask(object):
+
+    def __init__(self, ox_herd_args):
+        self.task_args = ox_herd_args
+
+class TestingTask(OxHerdTask):
+
+    def __init__(self, ox_herd_args=None):
+        OxHerdTask.__init__(self, ox_herd_args)
 
     def __call__(self, ox_test_args):
         test_file = ox_test_args.json_file if ox_test_args.json_file else (
@@ -67,14 +90,6 @@ class SimpleScheduler(object):
         
     @staticmethod
     def schedule_via_rq(args, task):
-        try:
-            import rq_scheduler
-            from redis import Redis
-        except ImportError as prob:
-            msg = 'Error importing rq_scheduler and redis: %s.\n%s\n' % (
-                prob, 'Install rq_scheduler and redis to use this manager.')
-            logging.error(msg)
-            raise
         queue_name = args.queue_name
         scheduler = rq_scheduler.Scheduler(
             connection=Redis(), queue_name=queue_name)
@@ -87,16 +102,27 @@ class SimpleScheduler(object):
 
     @staticmethod
     def cancel_job(job):
-        import rq_scheduler
-        from redis import Redis
         scheduler = rq_scheduler.Scheduler(connection=Redis())
         return scheduler.cancel(job)
+
+    @staticmethod
+    def cleanup_job(job_id):
+        conn = Redis()
+        failed_queue = get_failed_queue(conn)
+        failed_queue.remove(job_id)
+        return 'Removed job %s' % str(job_id)
+
+
+    @staticmethod
+    def requeue_job(job_id):
+        conn = Redis()
+        failed_queue = get_failed_queue(conn)
+        result = failed_queue.requeue(job_id)
+        return result
 
     @classmethod
     def launch_job(cls, job_id):
         logging.warning('Preparing to launch job with id %s', str(job_id))
-        import rq_scheduler
-        from redis import Redis
         my_args = cls.jobid_to_argrec(job_id)
         task = TestingTask()
         queue_name = my_args.queue_name
@@ -112,9 +138,6 @@ class SimpleScheduler(object):
 
     @staticmethod
     def jobid_to_argrec(job_id):
-        import rq_scheduler
-        from rq.job import Job
-        from redis import Redis
         scheduler = rq_scheduler.Scheduler(connection=Redis())
         old_job = Job.fetch(job_id, connection=scheduler.connection)
         ox_test_args = old_job.kwargs['ox_test_args']
@@ -125,8 +148,6 @@ class SimpleScheduler(object):
 
     @staticmethod
     def find_job(target_job):
-        import rq_scheduler
-        from redis import Redis
         scheduler = rq_scheduler.Scheduler(connection=Redis())
         job_list = scheduler.get_jobs()
         for job in job_list:
@@ -134,35 +155,48 @@ class SimpleScheduler(object):
                 return job
         return None
 
-
+    @staticmethod
+    def get_failed_jobs():
+        results = []
+        conn = Redis()
+        failed = get_failed_queue(conn)
+        failed_jobs = failed.jobs
+        for item in failed_jobs:
+            kwargs = getattr(item, 'kwargs', {})
+            if 'ox_herd_args' in kwargs or 'ox_test_args' in kwargs:
+                results.append(item)
+        return results
+            
     @staticmethod
     def get_scheduled_tests():
         results = []
-        try:
-            import rq_scheduler
-            from redis import Redis
-            scheduler = rq_scheduler.Scheduler(connection=Redis())
-            jobs = scheduler.get_jobs()
-            for item in jobs:
-                try:
-                    ox_test_args = item.kwargs.get('ox_test_args', None)
-                    if ox_test_args is not None:
-                        cron_string = item.meta.get('cron_string',None)
-                        if cron_string:
-                            my_item = copy.deepcopy(ox_test_args)
-                            my_item.schedule = item.meta.get('cron_string','')
-                            my_item.jid = item.id
-                            results.append(my_item)
-                        else:
-                            logging.info('Skipping task without cron_string.'
-                                         'Probably was just a one-off launch.')
-                except Exception as problem:
-                    logging.warning(
-                        'Skipping job %s in get_scheduled_tests due to exception %s',
-                        str(item), problem)
-        except ImportError as prob:
-            logging.debug('No python rq tasks since unable to import: %s',
-                          prob)
+        scheduler = rq_scheduler.Scheduler(connection=Redis())
+        jobs = scheduler.get_jobs()
+        for item in jobs:
+            try:
+                ox_test_args = item.kwargs.get('ox_test_args', None)
+                if ox_test_args is not None:
+                    cron_string = item.meta.get('cron_string',None)
+                    if cron_string:
+                        my_item = copy.deepcopy(ox_test_args)
+                        my_item.schedule = item.meta.get('cron_string','')
+                        my_item.jid = item.id
+                        results.append(my_item)
+                    else:
+                        logging.info('Skipping task without cron_string.'
+                                     'Probably was just a one-off launch.')
+            except Exception as problem:
+                logging.warning(
+                    'Skipping job %s in get_scheduled_tests due to exception %s',
+                    str(item), problem)
 
         return results
 
+    @staticmethod
+    def get_queued_jobs(allowed_queues=None):
+        queue = Queue(connection=Redis())
+        all_jobs = queue.jobs
+        if not allowed_queues:
+            return all_jobs
+        else:
+            return [j for j in all_jobs if j.origin in allowed_queues]
