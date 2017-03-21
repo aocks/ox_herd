@@ -1,6 +1,7 @@
 """Views for ox_herd flask blueprint.
 """
 
+import copy
 import datetime
 import logging
 import os
@@ -14,7 +15,7 @@ from flask.ext.login import login_required
 
 from ox_herd.file_cache import cache_utils
 from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
-from ox_herd.core import scheduling
+from ox_herd.core import scheduling, simple_ox_jobs
 from ox_herd.ui.flask_web_ui.ox_herd import forms
 from ox_herd import settings
 
@@ -132,10 +133,10 @@ def show_test():
 def show_scheduled():
     queue_names = request.args.get('queue_names', settings.QUEUE_NAMES)
     queue_names = list(sorted(queue_names.split()))
-    my_tests = scheduling.SimpleScheduler.get_scheduled_tests()
+    my_jobs = scheduling.SimpleScheduler.get_scheduled_jobs()
     failed_jobs = scheduling.SimpleScheduler.get_failed_jobs()
     queued = scheduling.SimpleScheduler.get_queued_jobs(queue_names)
-    return render_template('test_schedule.html', test_schedule=my_tests,
+    return render_template('test_schedule.html', test_schedule=my_jobs,
                            queue_names=queue_names, failed_jobs=failed_jobs,
                            queued=queued)
 
@@ -200,8 +201,8 @@ def schedule_job():
 
     jid = request.args.get('jid', None)
     if jid and request.method == 'GET':
-        my_args = scheduling.SimpleScheduler.jobid_to_argrec(jid)
-        my_form = forms.SchedJobForm(obj=my_args)
+        my_job = scheduling.SimpleScheduler.find_job(jid)
+        my_form = forms.SchedJobForm(obj=copy.deepcopy(my_job.special))
         my_form.name.data += '_copy'
     else:
         my_form = forms.SchedJobForm()
@@ -209,12 +210,15 @@ def schedule_job():
     if my_form.validate_on_submit():
         info = forms.GenericRecord()
         my_form.populate_obj(info)
-        job = scheduling.SimpleScheduler.add_to_schedule(info)
+        py_test_task = simple_ox_jobs.RunPyTest(simple_ox_jobs.RunPyTestArgs(
+            info.name, special=info))
+        job = scheduling.SimpleScheduler.add_to_schedule(
+            py_test_task, info.manager)
         return redirect('%s?jid=%s' % (
             url_for('ox_herd.show_job'), job.id))
-        
+
     return render_template(
         'ox_wtf.html', form=my_form, title='Schedule Test',
         intro=Markup(markdown.markdown(my_form.__doc__, extensions=[
             'fenced_code', 'tables'])))
-    
+

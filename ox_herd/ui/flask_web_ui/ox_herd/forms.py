@@ -8,7 +8,13 @@ from wtforms import (BooleanField, DateField, DateTimeField, StringField,
                      RadioField, IntegerField)
 
 class GenericRecord:
-    pass
+
+    def __init__(self, name=None, manager=None, **kw):
+        self.name = name
+        self.manager = manager
+        for key, value in kw.items():
+            setattr(self, key, value)
+
 
 class SchedJobForm(FlaskForm):
     """Use this form to enter parameters for a new job to schedule.

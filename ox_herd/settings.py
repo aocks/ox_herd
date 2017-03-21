@@ -11,3 +11,7 @@ STUB_USER_DB = {
 # Can be changed by your own software after importing settings if you like.
 QUEUE_NAMES = 'default'
 
+# Optional pair representing mode and string path to where we store
+# database tracking job execution. Default mode is 'sqlite' with
+# either a path to the sqliet db or None to use a default path.
+RUN_DB = ('sqlite', None)
