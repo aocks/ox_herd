@@ -1,0 +1,23 @@
+{% extends "ox_layout.html" %}
+{% block body %}
+
+<div class="w3-light-grey w3-margin-bottom">
+  <h2>Requeue Job</h2>
+  {% if jid %}
+  Requeued job {{ jid }} with result:
+  <PRE>{{ requeue }}</PRE>
+  {% else %}
+  Enter job id to requeue
+  <form action={{url_for('ox_herd.requeue_job')}} method="get">
+    <div>
+      <div class="tooltip"> job id: <span class="tooltiptext">
+	  ID of failed job to requeue
+	</span>
+      </div>
+      <input type="text" name="jid">
+    </div>
+  </form>
+  {% endif %}
+</div>
+
+{% endblock %}
