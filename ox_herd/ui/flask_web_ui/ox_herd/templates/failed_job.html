@@ -1,0 +1,16 @@
+
+<details><summary>{{ item.id }}</summary>
+  <UL>
+    <LI>Function : {{ item.func_name }} </LI>
+    <LI>Status : {{ item.status }} (is_failed = {{ item.is_failed }})</LI>
+    <LI><TABLE cellpadding="10">
+	<TH><A HREF={{url_for('ox_herd.cleanup_job')+'?jid=' + item.id}}>
+	    Cleanup</A></TH>
+	<TH><A HREF={{url_for('ox_herd.requeue_job')+'?jid=' + item.id}}>
+	    Requeue</A></TH>
+      </TABLE></LI>
+    <LI><details open><summary>Problem</summary>
+	<PRE>{{ item.exc_info }}</PRE>
+    </details></LI>
+  </UL>
+</details>
