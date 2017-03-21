@@ -90,7 +90,7 @@ def index():
         (name, Markup('<A HREF="%s">%s</A>' % (
             url_for('ox_herd.%s' % name), name))) for name in [
                 'show_test', 'list_tests', 'show_scheduled', 'cancel_job',
-                'schedule_job', 'show_job']])
+                'schedule_job', 'show_job', 'cleanup_job', 'requeue_job']])
 
     return render_template('ox_herd/templates/intro.html', commands=commands)
 
@@ -133,8 +133,11 @@ def show_scheduled():
     queue_names = request.args.get('queue_names', settings.QUEUE_NAMES)
     queue_names = list(sorted(queue_names.split()))
     my_tests = scheduling.SimpleScheduler.get_scheduled_tests()
+    failed_jobs = scheduling.SimpleScheduler.get_failed_jobs()
+    queued = scheduling.SimpleScheduler.get_queued_jobs(queue_names)
     return render_template('test_schedule.html', test_schedule=my_tests,
-                           queue_names=queue_names)
+                           queue_names=queue_names, failed_jobs=failed_jobs,
+                           queued=queued)
 
 @OX_HERD_BP.route('/show_job')
 @login_required
@@ -171,6 +174,25 @@ def cancel_job():
     else:
         cancel = scheduling.SimpleScheduler.cancel_job(jid)
         return render_template('cancel_job.html', jid=jid, cancel=cancel)
+
+@OX_HERD_BP.route('/cleanup_job')
+@login_required
+def cleanup_job():
+    cleanup = None
+    jid = request.args.get('jid', None)
+    if jid:
+        cleanup = scheduling.SimpleScheduler.cleanup_job(jid)
+    return render_template('cleanup_job.html', jid=jid, cleanup=cleanup)
+
+
+@OX_HERD_BP.route('/requeue_job')
+@login_required
+def requeue_job():
+    jid = request.args.get('jid', None)
+    if jid:
+        requeue = scheduling.SimpleScheduler.requeue_job(jid)
+    return render_template('requeue_job.html', jid=jid, requeue=requeue)
+
 
 @OX_HERD_BP.route('/schedule_job', methods=['GET', 'POST'])
 @login_required
