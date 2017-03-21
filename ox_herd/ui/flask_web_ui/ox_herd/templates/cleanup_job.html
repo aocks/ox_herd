@@ -1,0 +1,23 @@
+{% extends "ox_layout.html" %}
+{% block body %}
+
+<div class="w3-light-grey w3-margin-bottom">
+  <h2>Cleanup Job</h2>
+  {% if jid %}
+  Cleaned up and removed job {{ jid }} with result:
+  <PRE>{{ cleanup }}</PRE>
+  {% else %}
+  Enter job id to cleanup:
+  <form action={{url_for('ox_herd.cleanup_job')}} method="get">
+    <div>
+      <div class="tooltip"> job id: <span class="tooltiptext">
+	  ID of failed job to cleanup and remove from history.
+	</span>
+      </div>
+      <input type="text" name="jid">
+    </div>
+  </form>
+  {% endif %}
+</div>
+
+{% endblock %}
