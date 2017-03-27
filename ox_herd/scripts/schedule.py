@@ -5,7 +5,7 @@ import logging
 import collections
 import argparse
 
-from ox_herd.core.scheduling import SimpleScheduler
+from ox_herd.core.scheduling import OxScheduler
 
 def make_manager_choices():
     "Return dictionary of manager choices and docs."
@@ -54,7 +54,7 @@ def prepare_parser(parser=None):
 def run():
     parser = prepare_parser()
     args = parser.parse_args()
-    sched = SimpleScheduler.add_to_schedule(args)
+    sched = OxScheduler.add_to_schedule(args)
 
 if __name__ == '__main__':
     run()
