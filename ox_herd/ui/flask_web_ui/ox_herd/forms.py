@@ -5,7 +5,7 @@ import datetime
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from wtforms import (BooleanField, DateField, DateTimeField, StringField, 
-                     RadioField, IntegerField)
+                     RadioField, IntegerField, validators)
 
 class GenericRecord:
 
@@ -15,6 +15,16 @@ class GenericRecord:
         for key, value in kw.items():
             setattr(self, key, value)
 
+    def pop(self, item_list):
+        "Pop given list of strings out of self using delattr and return as dict"
+        result = {}
+        for name in item_list:
+            if hasattr(self, name):
+                result[name] = getattr(self, name)
+                delattr(self, name)
+            else:
+                result[name] = None
+        return result
 
 class SchedJobForm(FlaskForm):
     """Use this form to enter parameters for a new job to schedule.
@@ -28,7 +38,8 @@ class SchedJobForm(FlaskForm):
     name = StringField('name', [], default='test_', description=(
         'String name for the job you are going to schedule.'))
 
-    queue_name = StringField('name', [], default='default', description=(
+    queue_name = StringField('queue_name', [validators.DataRequired()], 
+                             default='', description=(
         'String name for the job queue that the task will use.\n'
         'Usually this is "default". If you use other names, you should\n'
         'make sure you have the appropriate workers running for that queue.'))
@@ -53,8 +64,9 @@ class SchedJobForm(FlaskForm):
             'to use the non-standard extended cron format with 6 fields, you\n'
             'may get unexpected results.'))
 
-    pytest = StringField(
-        'pytest', [], default='--ignore=/path/to/setup.py --doctest-modules',
+    pytest_cmd = StringField(
+        'pytest_cmd', [], 
+        default='--ignore=/path/to/setup.py --doctest-modules',
         description=(
             'Command line arguments for pytest. For example, you could\n'
             'provide something like\n\n'
