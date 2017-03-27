@@ -9,6 +9,9 @@ __pycache__/
 # C extensions
 *.so
 
+# Ignore stuff that looks like sqlite db
+_*.sqlite
+
 # Distribution / packaging
 .Python
 env/
