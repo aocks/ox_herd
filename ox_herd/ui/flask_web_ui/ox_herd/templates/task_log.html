@@ -1,0 +1,36 @@
+{% extends "ox_layout.html" %}
+{% block body %}
+
+<div class="w3-light-grey w3-margin-bottom">
+  <p>Minimum task_start_utc = {{ start_utc }}</p>
+  <p>Maximum task_end_utc = {{ end_utc }}</p>
+</div>
+
+{% for my_status, task_list in task_dict.items() %}
+<div class="w3-light-grey w3-margin-bottom">
+  <details open>
+    <summary style="font-size:200%;">
+      Tasks with status {{ my_status }} ({{task_list|count}} tasks)
+    </summary>
+    {% for task in task_list %}
+    {% if task.task_status == my_status or (
+       (my_status == 'other' and task.task_status not in task_types)) %}
+    <details>
+      <summary>
+	Task id {{ task.task_id }} : {{task.task_name}} 
+      </summary>
+      <UL>
+	<LI> Name : {{ task.task_name }} </LI>
+	<LI> Start UTC: {{ task.task_start_utc }} </LI> 
+	<LI> End UTC: {{ task.task_end_utc }} </LI> 
+	<LI> Return value: {{ task.return_value }} </LI> 
+	<LI> Status : {{ task.task_status }} </LI>
+      </UL>
+    </details>
+    {% endif %}
+    {% endfor %}
+  </details>
+</div>
+{% endfor %}
+
+{% endblock %}

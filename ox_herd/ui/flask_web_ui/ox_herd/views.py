@@ -15,7 +15,7 @@ from flask.ext.login import login_required
 
 from ox_herd.file_cache import cache_utils
 from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
-from ox_herd.core import scheduling, simple_ox_jobs
+from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db, ox_tasks
 from ox_herd.ui.flask_web_ui.ox_herd import forms
 from ox_herd import settings
 
@@ -91,7 +91,8 @@ def index():
         (name, Markup('<A HREF="%s">%s</A>' % (
             url_for('ox_herd.%s' % name), name))) for name in [
                 'show_test', 'list_tests', 'show_scheduled', 'cancel_job',
-                'schedule_job', 'show_job', 'cleanup_job', 'requeue_job']])
+                'schedule_job', 'show_job', 'cleanup_job', 'requeue_job',
+                'show_task_log']])
 
     return render_template('ox_herd/templates/intro.html', commands=commands)
 
@@ -109,6 +110,30 @@ def list_tests():
     test_master = cache_utils.unpickle_name('test_master.pickle')
     return render_template(
         'test_list.html', title='Test List', test_data=test_master)
+
+
+@OX_HERD_BP.route('/show_task_log')
+@login_required
+def show_task_log():
+    "Show log of tasks run."
+    
+    run_db_args = ox_tasks.OxHerdTask.choose_default_run_db()
+    run_db = ox_run_db.create(run_db_args)
+    start_utc=request.args.get('start_utc', None)
+    end_utc=request.args.get('end_utc', None)
+    tasks = run_db.get_tasks(start_utc=start_utc, end_utc=end_utc)
+    other = []
+    task_dict = collections.OrderedDict([('started', []), ('finished', [])])
+    for item in tasks:
+        if item.task_status in task_dict:
+            task_dict[item.task_status].append(item)
+        else:
+            other.append(item)
+    task_dict['other'] = other
+    
+    return render_template(
+        'task_log.html', title='Task log', start_utc=start_utc,
+        end_utc=end_utc, task_dict=task_dict)
 
 
 @OX_HERD_BP.route('/show_test')
@@ -133,9 +158,9 @@ def show_test():
 def show_scheduled():
     queue_names = request.args.get('queue_names', settings.QUEUE_NAMES)
     queue_names = list(sorted(queue_names.split()))
-    my_jobs = scheduling.SimpleScheduler.get_scheduled_jobs()
-    failed_jobs = scheduling.SimpleScheduler.get_failed_jobs()
-    queued = scheduling.SimpleScheduler.get_queued_jobs(queue_names)
+    my_jobs = scheduling.OxScheduler.get_scheduled_jobs()
+    failed_jobs = scheduling.OxScheduler.get_failed_jobs()
+    queued = scheduling.OxScheduler.get_queued_jobs(queue_names)
     return render_template('test_schedule.html', test_schedule=my_jobs,
                            queue_names=queue_names, failed_jobs=failed_jobs,
                            queued=queued)
@@ -147,19 +172,20 @@ def show_job():
     if not jid:
         return redirect(url_for('ox_herd.show_scheduled'))
     else:
-        job_info = scheduling.SimpleScheduler.find_job(jid)
-        if hasattr(job_info, 'kwargs'):
-            job_info = job_info.kwargs['ox_test_args']
-        if not hasattr(job_info, 'jid'):
-            job_info.jid = jid
-        return render_template('job_info.html', item=job_info)
+        my_job = scheduling.OxScheduler.find_job(jid)
+        ox_herd_task = getattr(my_job, 'kwargs', {}).get('ox_herd_task', None)
+        if ox_herd_task is None:
+            raise ValueError('Job for id %s has no ox_herd_task (job is %s)' % (
+                jid, str(my_job))) # FIXME: should show nice error not raise
+        return render_template('job_info.html', item=my_job)
+
 
 @OX_HERD_BP.route('/launch_job')
 @login_required
 def launch_job():
     jid = request.args.get('jid', None)
     if jid:
-        new_job = scheduling.SimpleScheduler.launch_job(jid)
+        new_job = scheduling.OxScheduler.launch_job(jid)
         new_jid = new_job.id
     else:
         new_jid = None
@@ -173,7 +199,7 @@ def cancel_job():
     if not jid:
         return render_template('cancel_job.html')
     else:
-        cancel = scheduling.SimpleScheduler.cancel_job(jid)
+        cancel = scheduling.OxScheduler.cancel_job(jid)
         return render_template('cancel_job.html', jid=jid, cancel=cancel)
 
 @OX_HERD_BP.route('/cleanup_job')
@@ -182,7 +208,7 @@ def cleanup_job():
     cleanup = None
     jid = request.args.get('jid', None)
     if jid:
-        cleanup = scheduling.SimpleScheduler.cleanup_job(jid)
+        cleanup = scheduling.OxScheduler.cleanup_job(jid)
     return render_template('cleanup_job.html', jid=jid, cleanup=cleanup)
 
 
@@ -191,7 +217,7 @@ def cleanup_job():
 def requeue_job():
     jid = request.args.get('jid', None)
     if jid:
-        requeue = scheduling.SimpleScheduler.requeue_job(jid)
+        requeue = scheduling.OxScheduler.requeue_job(jid)
     return render_template('requeue_job.html', jid=jid, requeue=requeue)
 
 
@@ -201,21 +227,21 @@ def schedule_job():
 
     jid = request.args.get('jid', None)
     if jid and request.method == 'GET':
-        my_job = scheduling.SimpleScheduler.find_job(jid)
-        my_form = forms.SchedJobForm(obj=copy.deepcopy(my_job.special))
+        my_job = scheduling.OxScheduler.find_job(jid)
+        my_args = my_job.kwargs.get('ox_herd_task', None)
+        if my_args is None:
+            raise ValueError("job %s had no kwargs['ox_herd_task']"%str(my_job))
+        my_args = copy.deepcopy(my_args)
+        my_form = forms.SchedJobForm(obj=my_args)
         my_form.name.data += '_copy'
     else:
         my_form = forms.SchedJobForm()
 
     if my_form.validate_on_submit():
-        info = forms.GenericRecord()
+        info = simple_ox_tasks.RunPyTest(name='not_yet_named')
         my_form.populate_obj(info)
-        py_test_task = simple_ox_jobs.RunPyTest(simple_ox_jobs.RunPyTestArgs(
-            info.name, special=info))
-        job = scheduling.SimpleScheduler.add_to_schedule(
-            py_test_task, info.manager)
-        return redirect('%s?jid=%s' % (
-            url_for('ox_herd.show_job'), job.id))
+        job = scheduling.OxScheduler.add_to_schedule(info, info.manager)
+        return redirect('%s?jid=%s' % (url_for('ox_herd.show_job'), job.id))
 
     return render_template(
         'ox_wtf.html', form=my_form, title='Schedule Test',

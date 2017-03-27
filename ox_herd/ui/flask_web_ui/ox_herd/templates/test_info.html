@@ -1,35 +1,37 @@
 
+{% set oh_task = item.kwargs['ox_herd_task'] %}
 <details>
-  <summary>{{ item.name }} : {{ item.manager }} </summary>
+  <summary>{{ oh_task.name }} : queue = {{ oh_task.queue_name }} {{ oh_task.manager }} </summary>
   <TABLE cellpadding="10"><TR>
 	<TH>
-	  <A HREF="{{url_for('ox_herd.launch_job')+'?jid=' + item.jid}}">
+	  <A HREF="{{url_for('ox_herd.launch_job')+'?jid=' + item.id}}">
 	    Launch Job Copy</A>
 	</TH>
 	<TH>
-	  <A HREF="{{url_for('ox_herd.schedule_job')+'?jid=' + item.jid}}">
+	  <A HREF="{{url_for('ox_herd.schedule_job')+'?jid=' + item.id}}">
 	    Edit Job Copy</A>
 	</TH>
-	{% if item.cron_string %}    
+	{% if oh_task.cron_string %}    
 	<TH>
-	  <A HREF="{{url_for('ox_herd.cancel_job')+'?jid=' + item.jid}}">
+	  <A HREF="{{url_for('ox_herd.cancel_job')+'?jid=' + item.id}}">
 	    Cancel Job</A>
 	</TH>
 	{% endif %}
   </TR></TABLE>
   <UL>
-    <LI>URL : <A HREF="{{item.url}}">{{item.url}}</A></LI>
-    {% if item.cron_string %}    
-    <LI> Cron string : {{item.cron_string}}</LI>
+    <LI>URL : <A HREF="{{oh_task.url}}">
+	{{oh_task.url}}</A></LI>
+    {% if oh_task.cron_string %}    
+    <LI> Cron string : {{oh_task.cron_string}}</LI>
     {% endif %}
-    {% if item.pytest %}
+    {% if oh_task.pytest %}
     <LI> pytest args : 
-      <PRE>{{ item.pytest }}</PRE>
+      <PRE>{{ oh_task.pytest_cmd }}</PRE>
     </LI>
     {% endif %}
-    {% if item.timeout %}
-    <LI> timeout : {{ item.timeout }} </LI>
+    {% if oh_task.timeout %}
+    <LI> timeout : {{ oh_task.timeout }} </LI>
     {% endif %}
-    <LI> job id : {{item.jid}} </LI>
+    <LI> job id : {{item.id}} </LI>
   </UL>
 </details>
