@@ -5,7 +5,7 @@ import logging
 
 try: # try to import rq_scheduler and redis but allow other modes if fail
     import rq
-    from rq.job import Job
+    from rq.job import Job, UnpickleError
     from rq import get_failed_queue, Queue
     import rq_scheduler
     from redis import Redis
@@ -14,28 +14,28 @@ except Exception as problem:
                   str(problem), 'Continue with non-rq options.')
     
 
-class SimpleScheduler(object):
+class OxScheduler(object):
 
     @classmethod
-    def add_to_schedule(cls, my_ox_job, manager):
+    def add_to_schedule(cls, ox_herd_task, manager):
         name = 'schedule_via_%s' % manager
-        func = getattr(cls, name)
-        return func(my_ox_job)
+        sched_func = getattr(cls, name)
+        return sched_func(ox_herd_task)
 
     @staticmethod
-    def schedule_via_instant(my_ox_job):
-        return my_ox_job()
+    def schedule_via_instant(ox_herd_task):
+        return ox_herd_task.func(ox_herd_task=ox_herd_task)
         
     @staticmethod
-    def schedule_via_rq(my_ox_job):
-        queue_name = my_ox_job.ox_herd_args.queue_name
+    def schedule_via_rq(ox_herd_task):
+        rq_kw = dict([(name, getattr(ox_herd_task, name)) 
+                      for name in ox_herd_task.rq_fields])
         scheduler = rq_scheduler.Scheduler(
-            connection=Redis(), queue_name=queue_name)
-        if my_ox_job.cron_string:
+            connection=Redis(), queue_name=rq_kw.pop('queue_name'))
+        if rq_kw['cron_string']:
             return scheduler.cron(
-                my_ox_job.cron_string, func=my_ox_job,
-                timeout=my_ox_job.ox_herd_args.timeout,
-                queue_name=queue_name)
+                rq_kw.pop('cron_string'), rq_kw.pop('func'),
+                kwargs={'ox_herd_task' : ox_herd_task}, **rq_kw)
         else:
             raise ValueError('No scheduling method for rq task.')
 
@@ -63,12 +63,16 @@ class SimpleScheduler(object):
     def launch_job(cls, job_id):
         logging.warning('Preparing to launch job with id %s', str(job_id))
         old_job = cls.find_job(job_id)
-        func = old_job.func
-        ox_job = func.make_copy()
-        my_queue = rq.Queue(ox_job.ox_herd_args.queue_name, connection=Redis())
-        new_job = my_queue.enqueue(ox_job, kwargs={'is_ox_job': True})
-        logging.warning('Launching new job with args' + str(
-            ox_job.ox_herd_args))
+        old_args = old_job.kwargs['ox_herd_task']
+        my_args = old_args.make_copy(old_args)
+        rq_kw = dict([(name, getattr(my_args, name)) 
+                      for name in my_args.rq_fields])
+        rq_kw.pop('cron_string') # launching now so get rid of cron_string
+        my_queue = rq.Queue(rq_kw.pop('queue_name'), connection=Redis())
+        new_job = my_queue.enqueue(
+            rq_kw.pop('func'), kwargs={'ox_herd_task' : my_args}, **rq_kw)
+        logging.warning('Launching new job with args' + str(my_args))
+
         return new_job
 
     @staticmethod
@@ -93,8 +97,13 @@ class SimpleScheduler(object):
         failed = get_failed_queue(conn)
         failed_jobs = failed.jobs
         for item in failed_jobs:
-            kwargs = getattr(item, 'kwargs', {})
-            if kwargs.get('is_ox_job', False):
+            try:
+                kwargs = getattr(item, 'kwargs', {})
+            except UnpickleError as problem:
+                logging.info('Could not unickle %s because %s; skip',
+                             str(item), str(problem))
+                continue
+            if kwargs.get('ox_herd_task', None) is not None:
                 results.append(item)
         return results
 
@@ -104,7 +113,12 @@ class SimpleScheduler(object):
         scheduler = rq_scheduler.Scheduler(connection=Redis())
         jobs = scheduler.get_jobs()
         for item in jobs:
-            if not getattr(item, 'kwargs').get('is_ox_job', False):
+            try:
+                if not getattr(item, 'kwargs').get('ox_herd_task', None):
+                    continue
+            except UnpickleError as problem:
+                logging.info('Could not unickle %s because %s; skip',
+                             str(item), str(problem))
                 continue
             try:
                 cron_string = item.meta.get('cron_string', None)
