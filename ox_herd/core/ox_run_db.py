@@ -1,46 +1,84 @@
-"""Simple database to track job execution.
+"""Simple database to track task execution.
 """
 
+import doctest
 import logging
 import os
 import datetime
 import sqlite3
 
+def create(run_db):
+    "Create and return RunDB reference based on run_db input."
+    if run_db[0] == 'sqlite':
+        return SqliteRunDB(run_db[1])
+
+    raise ValueError('Could not understand run_db %s' % str(run_db))
+
 class RunDB(object):
     """Abstract specification for database to track running of tasks.
     """
 
-    def record_job_start(self, job_name):
-        """Record that we are starting job with given name in database.
+    def record_task_start(self, task_name):
+        """Record that we are starting task with given name in database.
 
-        :arg job_name:        String name for job.
+        :arg task_name:        String name for task.
 
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
-        :returns:   Job id to use in referring to job later (e.g, in
-                    record_job_finish method).
+        :returns:   Task id to use in referring to task later (e.g, in
+                    record_task_finish method).
 
         PURPOSE:
 
         """
         raise NotImplementedError
 
-    def record_job_finish(self, job_id, return_value, status='finished'):
-        """Record we finished a job.
+    def record_task_finish(self, task_id, return_value, status='finished'):
+        """Record we finished a task.
 
-        :arg job_id:        ID for job as returned by record_job_start.
+        :arg task_id:        ID for task as returned by record_task_start.
 
-        :arg return_value:  String return value of job.
+        :arg return_value:  String return value of task.
 
-        :arg status='finished':   String status of job.
+        :arg status='finished':   String status of task.
 
         """
         raise NotImplementedError
 
-    def get_jobs(self, status='%'):
-        'Get all jobs matching given status string.'
-
+    def get_tasks(self, status='%', start_utc=None, end_utc=None):
+        """Return list of TaskInfo objects.
+        
+        :arg status='%':     Wildcard pattern for task status.
+        
+        :arg start_utc=None: String specifying minimum task_start_utc.       
+        
+        :arg end_utc=None:   String specifying maximum task_end_utc     
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        :returns:       List of TaskInfo objects.
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        PURPOSE:        Main way to get information about the tasks run.
+        
+        """
         raise NotImplementedError
+
+class TaskInfo(object):
+    """Python class to represent task info stored in database.
+    """
+
+    def __init__(
+            self, task_id, task_name, task_start_utc, task_status,
+            task_end_utc, return_value):
+        self.task_id = task_id
+        self.task_name = task_name
+        self.task_start_utc = task_start_utc
+        self.task_status = task_status
+        self.task_end_utc = task_end_utc
+        self.return_value = return_value
+
 
 class SqliteRunDB(RunDB):
     """Implementation of RunDB with sqlite backend.
@@ -56,12 +94,12 @@ class SqliteRunDB(RunDB):
     def sql_to_create_tables():
         "Return SQL to create required database tables."
 
-        sql = """CREATE TABLE job_info (
-          job_id INTEGER PRIMARY KEY ASC,
-          job_name text,
-          job_start_utc text,
-          job_status text,
-          job_end_utc text,
+        sql = """CREATE TABLE task_info (
+          task_id INTEGER PRIMARY KEY ASC,
+          task_name text,
+          task_start_utc text,
+          task_status text,
+          task_end_utc text,
           return_value text
         );
         """
@@ -77,36 +115,76 @@ class SqliteRunDB(RunDB):
         conn.commit()
         conn.close()
 
-    def record_job_start(self, job_name):
-        'Implement record_job_start for this backend.'
+    def record_task_start(self, task_name):
+        'Implement record_task_start for this backend.'
 
-        sql = '''INSERT INTO job_info (
-          job_name, job_start_utc, job_status) VALUES (?, ?, ?)
+        sql = '''INSERT INTO task_info (
+          task_name, task_start_utc, task_status) VALUES (?, ?, ?)
         '''
         cursor = self.conn.cursor()
-        cursor.execute(sql, [job_name, datetime.datetime.utcnow(), 'started'])
-        result = cursor.execute('SELECT last_insert_rowid()')
-        job_id = result.fetchall()
-        assert len(job_id) == 1 and len(job_id[0]) == 1
-        return job_id[0][0]
+        cursor.execute(sql, [task_name, datetime.datetime.utcnow(), 'started'])
+        task_id = cursor.lastrowid
+        self.conn.commit()
+        assert task_id is not None, (
+            'Expected 1 task id for insert but got %s' % str(task_id))
+        return task_id
 
-    def record_job_finish(self, job_id, return_value, status='finished'):
-        'Implement record_job_finish for this backend.'
+    def record_task_finish(self, task_id, return_value, status='finished'):
+        'Implement record_task_finish for this backend.'
 
-        sql = '''UPDATE job_info
-        SET job_end_utc=?, return_value=?, job_status=?
-        WHERE job_id=?'''
+        sql = '''UPDATE task_info
+        SET task_end_utc=?, return_value=?, task_status=?
+        WHERE task_id=?'''
         cursor = self.conn.cursor()
-        cursor.execute(sql, [datetime.datetime.utcnow(),
-                             return_value, status, job_id])
+        utcnow = datetime.datetime.utcnow()
+        cursor.execute(sql, [utcnow, return_value, str(status), task_id])
+        rowcount = cursor.rowcount
+        if rowcount > 1:
+            raise ValueError(
+                'Impossible: updated multiple rows with single task_id %s' % (
+                    str(task_id)))
+        elif not rowcount:
+            logging.error('Unable to update existing task with finish stats')
+            logging.error('Will create finished but unstarted task')
+            sql = '''INSERT INTO task_info (
+              task_name, task_start_utc, 
+              task_id, task_end_utc, return_value, task_status) VALUES (
+              'unknown', 'unknown', ?, ?, ?, ?)'''
+            cursor.execute(sql, [task_id, utcnow, return_value, status])
 
-    def get_jobs(self, status='%'):
-        'Implement get_jobs for this backend.'
+        self.conn.commit()
 
+    def get_tasks(self, status='%', start_utc=None, end_utc=None):
+        """Return list of TaskInfo objects.
+        
+        :arg status='%':     Wildcard pattern for task status.
+        
+        :arg start_utc=None: String specifying minimum task_start_utc.       
+        
+        :arg end_utc=None:   String specifying maximum task_end_utc     
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        :returns:       List of TaskInfo objects.
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        PURPOSE:        Main way to get information about the tasks run.
+        
+        """
         cursor = self.conn.cursor()
-        cursor.execute('select * from job_info where job_status like ?',
-                       [status])
-        return cursor.fetchall()
+        sql = ['select * from task_info where task_status like ?']
+        args = [status]
+        if start_utc is not None:
+            sql.append(' AND task_start_utc >= ?')
+            args.append(str(start_utc))
+        if end_utc is not None:
+            sql.append(' AND (task_end_utc IS NULL OR task_end_utc >= ?)')
+            args.append(str(end_utc))
+                       
+        cursor.execute('\n'.join(sql), args)
+
+        return [TaskInfo(*item) for item in cursor.fetchall()]
 
     @staticmethod
     def _regr_test():
@@ -115,12 +193,16 @@ class SqliteRunDB(RunDB):
 >>> from ox_herd.core import ox_run_db
 >>> db_file = tempfile.mktemp(suffix='.sql')
 >>> db = ox_run_db.SqliteRunDB(db_file)
->>> job_id = db.record_job_start('test')
+>>> task_id = db.record_task_start('test')
 >>> time.sleep(1)
->>> db.record_job_finish(job_id, 'test_return')
+>>> db.record_task_finish(task_id, 'test_return')
 >>> db.conn.close()
 >>> del db
 >>> os.remove(db_file)
 >>> assert not os.path.exists(db_file)
 
 """
+
+if __name__ == '__main__':
+    doctest.testmod()
+    print('Finished tests')
