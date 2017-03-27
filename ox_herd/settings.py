@@ -9,6 +9,7 @@ STUB_USER_DB = {
 
 # Space separated list of queue names to show in showing scheduled tests.
 # Can be changed by your own software after importing settings if you like.
+# First element will be the default queue to use.
 QUEUE_NAMES = 'default'
 
 # Optional pair representing mode and string path to where we store
