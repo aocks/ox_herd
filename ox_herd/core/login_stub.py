@@ -39,7 +39,10 @@ def login():
                 password == settings.STUB_USER_DB.get(username, None)):
             user = User(username)
             login_user(user)
-            return redirect(request.args.get("next"))
+            next_url = request.args.get("next", '')
+            next_url = next_url if next_url.strip().lower() != 'none' else (
+                url_for('ox_herd.show_scheduled'))
+            return redirect(next_url)
         else:
             flash('Login failed; try again')
             return redirect(url_for('login_stub.login'))
@@ -47,7 +50,22 @@ def login():
         messages = get_flashed_messages()
         flashes = '<UL>\n%s\n</UL>' % '\n'.join([
             '<LI>%s</LI>' % escape(m) for m in messages]) if messages else ''
-        return Response(flashes + '''
+        return Response(
+            flashes + '''
+            <h1>ox_herd login</h1>
+            <p>
+            Welcome to ox_herd! 
+            You are running the stand-alone ox_herd server.            
+            </p>
+            <p>
+            To interact, you need to login.
+            See the ox_herd/settings.py file to setup a trivial 
+            username/password dictionary to use with this stub login system.
+            <p>
+            Ideally, we will develop a better login setup for ox_herd or you
+            can use ox_herd as a blueprint in a larger flask fraemwork that
+            already handles its own login.
+            </p>
         <form action="" method="post">
             <p><input type=text name=username>
             <p><input type=password name=password>
@@ -71,3 +89,10 @@ def load_user(userid):
 
     return User(userid)
 
+
+
+@LOGIN_MANAGER.unauthorized_handler
+def unauthorized():
+    """Return response for when user is not logged in.
+    """
+    return redirect(url_for('login_stub.login'))
