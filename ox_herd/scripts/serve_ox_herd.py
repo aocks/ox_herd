@@ -78,7 +78,7 @@ def _serve(args):
     @app.route("/")
     def redirect_to_ox_herd():
         "Simple redirect to blueprint root."
-        return redirect(url_for("ox_herd.ox_herd"))
+        return redirect(url_for("ox_herd.show_scheduled"))
 
     app.run(host=args.host,
             debug=True, #FIXME: debug=args.debug,
