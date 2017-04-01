@@ -1,14 +1,22 @@
 """Simple database to track task execution.
 """
 
+import collections
 import doctest
 import logging
 import os
 import datetime
+import json
 import sqlite3
+import redis
+
+from ox_herd import settings as ox_settings
 
 def create(run_db):
     "Create and return RunDB reference based on run_db input."
+
+    if run_db[0] == 'redis':
+        return RedisRunDB()
     if run_db[0] == 'sqlite':
         return SqliteRunDB(run_db[1])
 
@@ -26,9 +34,11 @@ class RunDB(object):
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
         :returns:   Task id to use in referring to task later (e.g, in
-                    record_task_finish method).
+                    record_task_finish method). This is backend dependeant
+                    and may be an integer or string or something else 
+                    depending on what is easiest for the backend.
 
-        PURPOSE:
+        PURPOSE:    Record that we started something.
 
         """
         raise NotImplementedError
@@ -91,7 +101,8 @@ class TaskInfo(object):
 
     def __init__(
             self, task_id, task_name, task_start_utc, task_status,
-            task_end_utc, return_value, json_data, pickle_data):
+            task_end_utc=None, return_value=None, json_data=None, 
+            pickle_data=None):
         self.task_id = task_id
         self.task_name = task_name
         self.task_start_utc = task_start_utc
@@ -101,9 +112,166 @@ class TaskInfo(object):
         self.json_data = json_data
         self.pickle_data = pickle_data
 
+    def __repr__(self):
+        args = ', '.join(['%s=%s' % (
+            name, repr(value)) for name, value in self.to_dict().items()])
+        return '%s(%s)' % (self.__class__.__name__, args)
+
+    def to_dict(self):
+        """Return self as a dict.
+        """
+        return collections.OrderedDict([
+            (name, getattr(self, name, '')) for name in [
+                'task_id', 'task_name', 'task_start_utc', 'task_status',
+                'task_end_utc', 'return_value', 'json_data', 'pickle_data']])
+
+    def to_json(self):
+        """Return json version of self.
+        """
+        return json.dumps(self.to_dict())
+
+            
+
+class RedisRunDB(RunDB):
+    """Implementation of RunDB with redis backend.
+    """
+
+    def __init__(self):
+        self.conn = redis.StrictRedis()
+        self.my_prefix = ox_settings.REDIS_PREFIX + ':__'
+        self.id_counter = self.my_prefix + 'task_id_counter'
+        self.task_master = self.my_prefix + 'task_master'
+
+    def delete_all(self, really=False):
+        """Delete everything related to this from Redis.
+
+        Only works if really=True.
+        Mainly for testing; be *VERY* careful with this.
+        """
+        if not really:
+            raise ValueError('Not doing delete_all since really=%s' % str(
+                really))
+        my_keys = list(self.conn.scan_iter(match=self.my_prefix + '*'))
+        if my_keys:
+            #names = ' '.join([item.decode('utf8') for item in my_keys])
+            self.conn.delete(*my_keys)
+
+    def record_task_start(self, task_name):
+        'Implement record_task_start for this backend.'
+
+        if not task_name:
+            raise ValueError('Must have non-empty task_name not "%s"' % str(
+                task_name))
+        if task_name[0:2] == ':_':
+            raise ValueError('Invalid task name %s; cannot start with ":_"' % (
+                str(task_name)))
+        task_key = self.task_master + task_name
+        if self.conn.get(task_key):
+            raise ValueError('Cannot add task %s as %s since already exists' % (
+                str(task_name), task_name))
+        info = TaskInfo(
+            task_name, task_name, str(datetime.datetime.utcnow()), 
+            'started').to_json()
+        add_result = self.conn.set(task_key, info)
+        assert add_result, 'Got add_result = %s for %s; race condition?' % (
+            add_result, task_name)
+
+        return task_name
+
+    def record_task_finish(self, task_id, return_value, status='finished',
+                           json_blob=None, pickle_blob=None):
+        'Implement record_task_finish for this backend.'
+
+        task_name = task_id
+        task_key = self.task_master + task_name
+        task_info_json = self.conn.get(task_key)
+        if task_info_json:
+            task_info = json.loads(task_info_json.decode('utf-8'))
+        else:
+            logging.error('Unable to update existing task with finish stats')
+            logging.error('Will create finished but unstarted task')
+            task_info = {'task_name' : 'unknown',}
+
+        if task_info['task_status'] == 'finished':
+            raise ValueError('Cannot record_task_finish for %s; already ended.'
+                             % str(task_info))
+        task_info['task_end_utc'] = str(datetime.datetime.utcnow())
+        task_info['return_value'] = return_value
+        task_info['task_status'] = 'finished'
+        task_info['json_data'] = json_blob
+        task_info['pickle_data'] = pickle_blob
+        self.conn.set(task_key, json.dumps(task_info))
+
+    def get_tasks(self, status='finished', start_utc=None, end_utc=None):
+        """Return list of TaskInfo objects.
+        
+        :arg status='finished':   Status of tasks to search. Should be one
+                                  entries from get_allowed_status().
+        
+        :arg start_utc=None: String specifying minimum task_start_utc.       
+        
+        :arg end_utc=None:   String specifying maximum task_end_utc     
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        :returns:       List of TaskInfo objects.
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        PURPOSE:        Main way to get information about the tasks run.
+        
+        """
+        result = []
+        for key in self.conn.scan_iter(match=self.task_master + '*'):
+            item_json = self.conn.get(key)
+            item_kw = json.loads(item_json.decode('utf8'))
+            if not (status is None or item_kw['task_status'] == status):
+                continue
+            if not (start_utc is None or item_kw['start_utc'] >= start_utc):
+                continue
+            if not (end_utc is None or item_kw['end_utc'] <= end_utc):
+                continue
+            result.append(TaskInfo(**item_kw))
+        return result
+
+    @staticmethod
+    def _regr_test():
+        """
+>>> import os, tempfile, datetime, time, random, imp
+>>> random_key = random.randint(0,10000000) # so tests do not collide
+>>> print('Using random_key = %s' % str(random_key)) # doctest: +ELLIPSIS
+Using random_key = ...
+>>> from ox_herd.core import ox_run_db
+>>> ox_run_db.ox_settings.REDIS_PREFIX += ('test_%s' % random_key)
+>>> ignore = imp.reload(ox_run_db)
+>>> db = ox_run_db.RedisRunDB()
+>>> task_id = db.record_task_start('test')
+>>> time.sleep(1)
+>>> db.record_task_finish(task_id, 'test_return')
+>>> t = db.get_tasks()
+>>> len(t)
+1
+>>> t[0].task_name
+'test'
+>>> t[0].task_status
+'finished'
+>>> task_id = db.record_task_start('test_again')
+>>> len(db.get_tasks('finished'))
+1
+>>> len(db.get_tasks(None))
+2
+>>> db.delete_all(really=True)
+>>> db.conn.keys(ox_run_db.ox_settings.REDIS_PREFIX + '*')
+[]
+
+"""
+
 
 class SqliteRunDB(RunDB):
     """Implementation of RunDB with sqlite backend.
+
+    Redis is preferred, but SqliteRunDB is also possible with more
+    configuration.
     """
 
     def __init__(self, db_path, allow_create=True):
