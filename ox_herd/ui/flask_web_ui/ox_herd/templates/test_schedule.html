@@ -1,8 +1,17 @@
 {% extends "ox_layout.html" %}
 {% block body %}
 
+<div class="w3-teal w3-margin-bottom w3-panel">
+  <h2>Welcome to the ox_herd schedule</h2>
+  <p>
+    This page lets you view jobs in various ways.
+    <br>
+    Click on one of the nodes below to expand and 
+    view job information.
+  </p>
+</div>
 
-<div class="w3-light-grey w3-margin-bottom">
+<div class="w3-light-grey w3-margin-bottom w3-panel">
   <details open>
     <summary style="font-size:200%;">
       Jobs Currently Queued and Waiting to Run:
@@ -11,7 +20,7 @@
     <details>
       <summary>Job id : {{ job.id }}</summary>
       <UL>
-	<LI> Name : {{ job.kwargs.ox_test_args.name }}</LI>
+	<LI> Name : {{ job.kwargs['ox_herd_task'].name }}</LI>
 	<LI> Enqueued at : {{ job.enqueued_at }}</LI>
 	<LI> Status : {{ job.status }}</LI>
 	<LI> Origin : {{ job.origin }}</LI>
@@ -27,7 +36,7 @@
 
     
 {% for qname in queue_names %}
-<div class="w3-light-grey w3-margin-bottom">
+<div class="w3-light-grey w3-margin-bottom w3-panel">
   <details open>
     <summary style="font-size:200%;">
       Scheduled Jobs for queue "{{ qname }}":
@@ -41,7 +50,7 @@
   </details>
 </div>
 
-<div class="w3-light-grey w3-margin-bottom">
+<div class="w3-light-grey w3-margin-bottom w3-panel">
   <details>
     <summary style="font-size:200%;">
       Ignored jobs:
@@ -59,13 +68,12 @@
 </div>
 {% endfor %}
 
-<div class="w3-light-grey w3-margin-bottom">
+<div class="w3-light-grey w3-margin-bottom w3-panel">
   <details open><summary style="font-size:200%;">Failed jobs:</summary>
     {% for item in failed_jobs %}
     {% include 'failed_job.html' %}
     {% endfor %}
   </details>
 </div>
-
 
 {% endblock %}
