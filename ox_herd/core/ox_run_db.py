@@ -33,7 +33,8 @@ class RunDB(object):
         """
         raise NotImplementedError
 
-    def record_task_finish(self, task_id, return_value, status='finished'):
+    def record_task_finish(self, task_id, return_value, status='finished',
+                           json_blob=None, pickle_blob=None):
         """Record we finished a task.
 
         :arg task_id:        ID for task as returned by record_task_start.
@@ -42,13 +43,23 @@ class RunDB(object):
 
         :arg status='finished':   String status of task.
 
+        :arg json_blob=None:  Optional string representing json encoding of 
+                              task output. Using JSON to store the result
+                              for later inspection is more portable.
+
+        :arg pickle_blob=None:  Optional string representing python pickle
+                                encoding of task output. Using JSON to store 
+                                the result for later inspection is more 
+                                portable, but you can use pickle if necessary.
+
         """
         raise NotImplementedError
 
-    def get_tasks(self, status='%', start_utc=None, end_utc=None):
+    def get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
         
-        :arg status='%':     Wildcard pattern for task status.
+        :arg status='finished':   Status of tasks to search. Should be one
+                                  of entries from get_allowed_status().
         
         :arg start_utc=None: String specifying minimum task_start_utc.       
         
@@ -65,19 +76,30 @@ class RunDB(object):
         """
         raise NotImplementedError
 
+    @staticmethod
+    def get_allowed_status():
+        """Return list of allowed status strings for tasks.
+
+        It is important to only use values from the allowed list so
+        we can store effectively on things like redis.
+        """
+        return ['started', 'finished']
+
 class TaskInfo(object):
     """Python class to represent task info stored in database.
     """
 
     def __init__(
             self, task_id, task_name, task_start_utc, task_status,
-            task_end_utc, return_value):
+            task_end_utc, return_value, json_data, pickle_data):
         self.task_id = task_id
         self.task_name = task_name
         self.task_start_utc = task_start_utc
         self.task_status = task_status
         self.task_end_utc = task_end_utc
         self.return_value = return_value
+        self.json_data = json_data
+        self.pickle_data = pickle_data
 
 
 class SqliteRunDB(RunDB):
@@ -100,7 +122,9 @@ class SqliteRunDB(RunDB):
           task_start_utc text,
           task_status text,
           task_end_utc text,
-          return_value text
+          return_value text,
+          json_blob text,
+          pickle_blob text
         );
         """
         return sql
@@ -129,15 +153,18 @@ class SqliteRunDB(RunDB):
             'Expected 1 task id for insert but got %s' % str(task_id))
         return task_id
 
-    def record_task_finish(self, task_id, return_value, status='finished'):
+    def record_task_finish(self, task_id, return_value, status='finished',
+                           json_blob=None, pickle_blob=None):
         'Implement record_task_finish for this backend.'
 
         sql = '''UPDATE task_info
-        SET task_end_utc=?, return_value=?, task_status=?
+        SET task_end_utc=?, return_value=?, task_status=?, 
+            json_blob=?, pickle_blob=?
         WHERE task_id=?'''
         cursor = self.conn.cursor()
         utcnow = datetime.datetime.utcnow()
-        cursor.execute(sql, [utcnow, return_value, str(status), task_id])
+        cursor.execute(sql, [utcnow, return_value, str(status), json_blob,
+                             pickle_blob, task_id])
         rowcount = cursor.rowcount
         if rowcount > 1:
             raise ValueError(
@@ -148,16 +175,19 @@ class SqliteRunDB(RunDB):
             logging.error('Will create finished but unstarted task')
             sql = '''INSERT INTO task_info (
               task_name, task_start_utc, 
-              task_id, task_end_utc, return_value, task_status) VALUES (
+              task_id, task_end_utc, return_value, task_status
+              json_blob=?, pickle_blob=?) VALUES (
               'unknown', 'unknown', ?, ?, ?, ?)'''
-            cursor.execute(sql, [task_id, utcnow, return_value, status])
+            cursor.execute(sql, [json_blob, pickle_blob, task_id, 
+                                 utcnow, return_value, status])
 
         self.conn.commit()
 
-    def get_tasks(self, status='%', start_utc=None, end_utc=None):
+    def get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
         
-        :arg status='%':     Wildcard pattern for task status.
+        :arg status='finished':   Status of tasks to search. Should be one
+                                  entries from get_allowed_status().
         
         :arg start_utc=None: String specifying minimum task_start_utc.       
         
