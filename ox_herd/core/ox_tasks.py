@@ -3,6 +3,9 @@
 An OxHerdTask is a general class to represent a task managed by ox_herd.
 Users are meant to sub-class OxHerdTask for their own use. See docstring for
 OxHerdTask for details.
+
+You can find some example sub-classes of OxHerdTask in the simple_ox_tasks.py
+module.
 """
 
 import shlex
@@ -31,9 +34,10 @@ class OxHerdTask(object):
     if you are using python rq, the INSTANCE is in kwargs and the function
     is a class method which uses those kwargs.
 
+    The simple_ox_tasks has some examples.
+
     TL;DR = Use only classmethod in OxHerdTask (or sub-classes) and expect
             an instance to be passed in with data.
-
     """
 
     # Fields that affect how we pass job into python rq
@@ -56,6 +60,15 @@ class OxHerdTask(object):
         :arg run_db=None:    Database used to track execution of the task. If
                              None is provided, we use default db.
 
+        :arg queue_name=None:  Optional string representing which queue
+                               to run. If not provided, then we use the
+                               first item from ox_settings.QUEUE_NAMES.
+
+        :arg timeout=None:     Optional timeout for job.
+
+        :arg cron_string=None: Optional string in cron format saying how
+                               the job should be scheduled.
+
         """
         self.name = name
         self.func = func if func is not None else self.run_ox_task
@@ -68,6 +81,23 @@ class OxHerdTask(object):
 
     @staticmethod
     def make_copy(ox_herd_task, name_suffix='_copy'):
+        """Helper function to make a copy of the task.
+        
+        :arg ox_herd_task:        Instance of OxHerdTask to copy.
+        
+        :arg name_suffix='_copy': Optional suffix to append to name.       
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        :returns:       Copied task.
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        PURPOSE:    We sometimes want to make copies of a task (e.g., 
+                    if the user wants to launch a copy of a scheduled task).
+                    This method makes a copy but with a different name. It
+                    also allows sub-classes to control how copies are made.
+        """
         args = copy.deepcopy(ox_herd_task)
         args.name += name_suffix
         return args
@@ -75,7 +105,9 @@ class OxHerdTask(object):
 
     @staticmethod
     def choose_default_run_db():
-        "Chose default settings for run_db baed on settings for ox_herd."
+        """Chose default settings for run_db baed on settings for ox_herd.
+
+        """
 
         run_db = ox_settings.RUN_DB
         if run_db[0] == 'sqlite':
@@ -101,15 +133,18 @@ class OxHerdTask(object):
     def pre_call(cls, ox_herd_task, rdb):
         """Will be called before main_call.
 
+        :arg ox_herd_task:  The instance of the task to do pre_call for.
+
         :arg rdb:    Instance of RunDB to record job start and job end.
 
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
-        PURPOSE:
+        PURPOSE:   Run some operations before main_call.
 
         This does things like stores the fact that we started the job in
         a database. If users override, they should probably call this, or
-        implement their own job tracking.
+        implement their own job tracking. The idea is that users can just
+        use the default pre_call and only override main_call for their job.
         """
         assert ox_herd_task.rdb_job_id is None, (
             'Cannot have rdb_job_id set before callign pre_call.')
@@ -118,6 +153,8 @@ class OxHerdTask(object):
     @classmethod
     def post_call(cls, ox_herd_task, rdb, return_value, status='finished'):
         """Called just after main_call finishes.
+
+        :arg ox_herd_task:  The instance of the task to do post_call for.
 
         :arg rdb:    Instance of RunDB to record job start and job end.
 
