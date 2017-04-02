@@ -45,6 +45,12 @@ class RunPyTest(OxHerdTask):
         self.json_file = json_file
         self.url = url
 
+    @staticmethod
+    def get_template_name():
+        "Override to use custom template to report py test results."
+
+        return 'py_test_report.html'
+
     @classmethod
     def main_call(cls, ox_herd_task):
         test_file = ox_herd_task.json_file if ox_herd_task.json_file else (
@@ -56,8 +62,9 @@ class RunPyTest(OxHerdTask):
             os.remove(test_file) # remove temp file
 
         rval = 'completed test: ' + ', '.join(['%s=%s' % (name, test_data[
-            'summary'].get(name, 'unknown')) for name in [
-                'failed', 'passed', 'duration']])
+            'summary'].get(
+                name, '0' if name == 'failed' else 'unknown')) for name in [
+                    'failed', 'passed', 'duration']])
         return {'return_value' : rval, 'json_blob' : test_data}
 
     @staticmethod
