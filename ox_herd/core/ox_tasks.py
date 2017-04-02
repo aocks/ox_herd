@@ -12,7 +12,6 @@ import shlex
 import copy
 import logging
 
-from ox_herd.file_cache import cache_utils
 from ox_herd import settings as ox_settings
 from ox_herd.core import ox_run_db
 
@@ -116,13 +115,27 @@ class OxHerdTask(object):
             if run_db[1]:
                 return run_db
             else:
-                return (run_db[0], cache_utils.get_path(
-                    '_ox_herd_run_db.sqlite'))
+                raise ValueError('Need to provide valid path for sqlite run_db')
 
         raise ValueError('Could not understand run_db setting: %s'
                          % str(run_db))
 
 
+    @staticmethod
+    def get_template_name():
+        """Return string for jinja template to use in display task result.
+
+        By default we just display some information which every task should
+        have available.
+
+        If you register your own blueprints or otherwise get jinja templates
+        into your path, you can override this to return your own templates.
+
+        The task will be passed in as as task_data.
+        """
+        return 'generic_ox_task_result.html'
+        
+        
     @classmethod
     def main_call(cls, ox_herd_task):
         """Main function to run the task.
@@ -166,7 +179,8 @@ class OxHerdTask(object):
         """
         assert ox_herd_task.rdb_job_id is None, (
             'Cannot have rdb_job_id set before callign pre_call.')
-        ox_herd_task.rdb_job_id = rdb.record_task_start(ox_herd_task.name)
+        ox_herd_task.rdb_job_id = rdb.record_task_start(
+            ox_herd_task.name, ox_herd_task.get_template_name())
 
     @classmethod
     def post_call(cls, ox_herd_task, rdb, call_result, status='finished'):
