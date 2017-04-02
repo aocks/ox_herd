@@ -165,25 +165,25 @@ class RedisRunDB(RunDB):
         if task_name[0:2] == ':_':
             raise ValueError('Invalid task name %s; cannot start with ":_"' % (
                 str(task_name)))
-        task_key = self.task_master + task_name
+        task_id = '%s_%s' % (task_name, datetime.datetime.utcnow().timestamp())
+        task_key = self.task_master + task_id
         if self.conn.get(task_key):
             raise ValueError('Cannot add task %s as %s since already exists' % (
-                str(task_name), task_name))
+                str(task_name), task_id))
         info = TaskInfo(
-            task_name, task_name, str(datetime.datetime.utcnow()), 
+            task_id, task_name, str(datetime.datetime.utcnow()), 
             'started').to_json()
         add_result = self.conn.set(task_key, info)
         assert add_result, 'Got add_result = %s for %s; race condition?' % (
-            add_result, task_name)
+            add_result, task_id)
 
-        return task_name
+        return task_id
 
     def record_task_finish(self, task_id, return_value, status='finished',
                            json_blob=None, pickle_blob=None):
         'Implement record_task_finish for this backend.'
 
-        task_name = task_id
-        task_key = self.task_master + task_name
+        task_key = self.task_master + task_id
         task_info_json = self.conn.get(task_key)
         if task_info_json:
             task_info = json.loads(task_info_json.decode('utf-8'))
