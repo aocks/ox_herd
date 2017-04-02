@@ -13,7 +13,6 @@ import markdown
 from flask import render_template, redirect, request, Markup, url_for, escape
 from flask.ext.login import login_required
 
-from ox_herd.file_cache import cache_utils
 from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
 from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db, ox_tasks
 from ox_herd.ui.flask_web_ui.ox_herd import forms
@@ -23,55 +22,6 @@ from collections import namedtuple
 def d_to_nt(dictionary):
     "Convert dictionaryt to namedtuple"
     return namedtuple('GenericDict', dictionary.keys())(**dictionary)
-
-def reprocess_master(keep_recent=16):
-    result = {'tests' : []}
-    root = cache_utils.get_path('test_results')
-    files = list(reversed(sorted(glob.glob(os.path.join(root, '*.pkl')))))
-    time_and_file = list(reversed(sorted([
-        (os.path.getmtime(f), f) for f in files])))
-    delete_old_data(time_and_file[keep_recent:])
-    time_and_file = time_and_file[:keep_recent]
-    for dummy_time, my_file in time_and_file:
-        name = os.path.basename(my_file)
-        my_test = TestSummary(name)
-        my_test.read_from_file(root=root)
-        result['tests'].append(my_test.as_row())
-    result['processed_at'] = datetime.datetime.now()
-    cache_utils.pickle_with_name(result, 'test_master.pickle', overwrite=True)
-
-class TestSummary(object):
-
-    def __init__(self, name, data=None, error=None):
-        self.name = name
-        self.data = data
-        self.error = error
-
-    def read_from_file(self, root=None):
-        root = root if root else cache_utils.get_path('test_results')
-        try:
-            self.data = cache_utils.unpickle_name('test_results/' + self.name)
-        except Exception as problem:
-            prob_str = str(problem)
-            if len(prob_str) > 95:
-                prob_str = prob_str[:95] + '...'
-            self.error = 'Could not understand test %s because %s' % (
-                self.name[0:80], prob_str)
-
-    def as_row(self):
-        assert self.data or self.error, 'Cannot make row without info.'
-        name_cell = '<TD><A HREF="%s?test_name=%s">%s</A></TD>' % (
-            url_for('ox_herd.show_test'), self.name, self.name)
-        if self.error:
-            return Markup('<TR>%s<TD colspan="4">%s</TD></TR>' % (
-                name_cell, escape(self.error)))
-        else:
-            return Markup('<TR>\n%s\n%s</TR>' % (
-                name_cell, '\n'.join(['<TD>%s</TD>' % i for i in [
-                    self.data['summary'].get('failed', 0),
-                    self.data['summary'].get('passed', 0),
-                    '%.2f' % self.data['summary']['duration'],
-                    self.data['created_at']]])))
 
 def delete_old_data(old_data):
     for old_time, old_file in old_data:
@@ -90,26 +40,20 @@ def index():
     commands = collections.OrderedDict([
         (name, Markup('<A HREF="%s">%s</A>' % (
             url_for('ox_herd.%s' % name), name))) for name in [
-                'show_test', 'list_tests', 'show_scheduled', 'cancel_job',
+                'show_task', 'list_tasks', 'show_scheduled', 'cancel_job',
                 'schedule_job', 'show_job', 'cleanup_job', 'requeue_job',
                 'show_task_log']])
 
     return render_template('ox_herd/templates/intro.html', commands=commands)
 
 
-@OX_HERD_BP.route('/list_tests')
+@OX_HERD_BP.route('/list_tasks')
 @login_required
-def list_tests():
-    "Show list of available test results."
+def list_tasks():
+    "Show list of tasks so you can inspect them."
 
-    master_file = cache_utils.get_path('test_master.pickle')
-    if 1 or not os.path.exists(master_file):#FIXME do not reproc every time!
-        reprocess_master()
-    if not os.path.exists(master_file):        
-        raise Exception('No test master file found at %s' % master_file) #FIXME
-    test_master = cache_utils.unpickle_name('test_master.pickle')
-    return render_template(
-        'test_list.html', title='Test List', test_data=test_master)
+    tasks = ox_run_db.create().get_tasks()
+    return render_template('task_list.html', title='Task List', tasks=tasks)
 
 
 @OX_HERD_BP.route('/show_task_log')
@@ -117,8 +61,7 @@ def list_tests():
 def show_task_log():
     "Show log of tasks run."
     
-    run_db_args = ox_tasks.OxHerdTask.choose_default_run_db()
-    run_db = ox_run_db.create(run_db_args)
+    run_db = ox_run_db.create()
     start_utc=request.args.get('start_utc', None)
     end_utc=request.args.get('end_utc', None)
     tasks = run_db.get_tasks(start_utc=start_utc, end_utc=end_utc)
@@ -136,22 +79,28 @@ def show_task_log():
         end_utc=end_utc, task_dict=task_dict)
 
 
-@OX_HERD_BP.route('/show_test')
+@OX_HERD_BP.route('/show_task')
 @login_required
-def show_test():
-    "Show results for a test."
+def show_task():
+    "Show information about a task."
 
-    test_name = request.args.get('test_name', None)
+    task_id = request.args.get('task_id', None)
+    run_db = ox_run_db.create()
     try:
-        test_data = cache_utils.unpickle_name('test_results/' + test_name)
+        task_data = run_db.get_task(task_id)
+        if not task_data:
+            raise KeyError('No task with id %s' % str(task_id))
     except Exception as problem:
         return render_template(
-            'generic_error.html',title='Could not find test',
-            commentary='Could not find test %s because %s' % (
-                problem, test_name))
+            'generic_error.html',title='Could not find task',
+            commentary='Could not find task with id %s because %s' % (
+                task_id, problem))
 
-    return render_template('test_report.html', title='Test Report',
-                           test_data=test_data, test_name=test_name)
+    template = request.args.get('template', task_data.template)
+    template = template if (
+        template and template.strip() and template != 'default') else (
+            'generic_ox_task_result.html')
+    return render_template(template, title='Task Report', task_data=task_data)
 
 @OX_HERD_BP.route('/show_scheduled')
 @login_required
