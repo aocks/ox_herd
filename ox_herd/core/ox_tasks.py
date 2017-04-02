@@ -110,6 +110,8 @@ class OxHerdTask(object):
         """
 
         run_db = ox_settings.RUN_DB
+        if run_db[0] == 'redis':
+            return run_db
         if run_db[0] == 'sqlite':
             if run_db[1]:
                 return run_db
@@ -126,6 +128,22 @@ class OxHerdTask(object):
         """Main function to run the task.
 
         Sub-classes should override to do something useful.
+        
+        The return value should either be a simple string of 80 characters
+        or less describing the result or a dict.
+
+        If a dict is returned, it should be as follows:
+
+           { 'return_value' : <simple string or return code>,
+             'json_blob' : <string as produced by json.dumps>,
+             'pickle_blob' : <string as produced by pickle.dumps }
+
+        You should use return_value for simple, small return codes like a
+        'completed succesfully' message or 'invalid data' message or something.
+        You should use json_blob for more complicated results when possible
+        as that is most portable. If you have really complex return values,
+        use pickle_blob. If provided, these values will be stored in the
+        RunDB for later inspection by the web UI or other tools.
         """
         raise NotImplementedError
 
@@ -151,14 +169,15 @@ class OxHerdTask(object):
         ox_herd_task.rdb_job_id = rdb.record_task_start(ox_herd_task.name)
 
     @classmethod
-    def post_call(cls, ox_herd_task, rdb, return_value, status='finished'):
+    def post_call(cls, ox_herd_task, rdb, call_result, status='finished'):
         """Called just after main_call finishes.
 
         :arg ox_herd_task:  The instance of the task to do post_call for.
 
         :arg rdb:    Instance of RunDB to record job start and job end.
 
-        :arg return_value:   Return value of job.
+        :arg call_result:  Value returned by main_call (either a string or
+                           dict); see docs for main_call return value.
 
         :arg status='finished':    Final status of job.
 
@@ -171,7 +190,17 @@ class OxHerdTask(object):
         a database. If users override, they should probably call this, or
         implement their own job tracking.
         """
-        rdb.record_task_finish(ox_herd_task.rdb_job_id, return_value, status)
+        rval = {}
+        if isinstance(call_result, str):
+            rval['return_value'] = call_result
+        elif isinstance(call_result, dict):
+            rval = dict(call_result)
+        else:
+            raise TypeError(
+                'call_result from main_call must be str or dict not %s' % (
+                    str(call_result)))
+                
+        rdb.record_task_finish(ox_herd_task.rdb_job_id, status=status, **rval)
 
     @classmethod
     def run_ox_task(cls, ox_herd_task):
@@ -181,9 +210,7 @@ class OxHerdTask(object):
         """
         job_name = ox_herd_task.name
         run_db = ox_herd_task.run_db
-        assert run_db[0] == 'sqlite', (
-            'Cannot handle run_db of %s' % str(run_db))
-        rdb = ox_run_db.SqliteRunDB(run_db[1])
+        rdb = ox_run_db.create(run_db)
         cls.pre_call(ox_herd_task, rdb)
         try:
             result = cls.main_call(ox_herd_task)
@@ -192,4 +219,4 @@ class OxHerdTask(object):
                           job_name, str(problem))
             cls.post_call(ox_herd_task, rdb, str(problem), 'exception')
             raise
-        cls.post_call(ox_herd_task, rdb, str(result))
+        cls.post_call(ox_herd_task, rdb, result)
