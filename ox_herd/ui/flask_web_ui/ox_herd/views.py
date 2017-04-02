@@ -110,7 +110,7 @@ def show_scheduled():
     my_jobs = scheduling.OxScheduler.get_scheduled_jobs()
     failed_jobs = scheduling.OxScheduler.get_failed_jobs()
     queued = scheduling.OxScheduler.get_queued_jobs(queue_names)
-    return render_template('test_schedule.html', test_schedule=my_jobs,
+    return render_template('task_schedule.html', task_schedule=my_jobs,
                            queue_names=queue_names, failed_jobs=failed_jobs,
                            queued=queued)
 

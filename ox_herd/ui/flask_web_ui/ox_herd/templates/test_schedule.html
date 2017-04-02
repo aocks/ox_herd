@@ -41,10 +41,10 @@
     <summary style="font-size:200%;">
       Scheduled Jobs for queue "{{ qname }}":
     </summary>
-    {% for item in test_schedule %}
+    {% for item in task_schedule %}
     {% set oh_task = item.kwargs['ox_herd_task'] %}
     {% if oh_task.queue_name == qname %}
-    {% include 'test_info.html' %}
+    {% include 'task_info.html' %}
     {% endif %}
     {% endfor %}
   </details>
@@ -55,10 +55,10 @@
     <summary style="font-size:200%;">
       Ignored jobs:
     </summary>
-  {% for item in test_schedule %}
+  {% for item in task_schedule %}
   {% set oh_task = item.kwargs['ox_herd_task'] %}
   {% if oh_task.queue_name not in queue_names %}
-  {% include 'test_info.html' %}
+  {% include 'task_info.html' %}
   {% endif %}
   {% endfor %}
   </details>
