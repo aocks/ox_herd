@@ -78,12 +78,15 @@ def _serve(args):
 
     @app.route("/")
     def redirect_to_ox_herd():
-        "Simple redirect to blueprint root."
-        return redirect(url_for("ox_herd.index"))
+        """Simple redirect to blueprint root.
 
-    app.run(host=args.host,
-            debug=True, #FIXME: debug=args.debug,
-            port=int(args.port))
+        This is required so we can redirect from the top-level path
+        when running ox_herd in stand-alone mode.
+        """
+        return redirect(url_for("ox_herd.index"))
+    logging.debug('Created %s for initial redirection', redirect_to_ox_herd)
+
+    app.run(host=args.host, debug=args.debug, port=int(args.port))
 
 
 if __name__ == '__main__':
