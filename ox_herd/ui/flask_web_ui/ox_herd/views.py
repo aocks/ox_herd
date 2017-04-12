@@ -2,19 +2,17 @@
 """
 
 import copy
-import datetime
 import logging
 import os
-import glob
 import collections
 
 import markdown
 
-from flask import render_template, redirect, request, Markup, url_for, escape
+from flask import render_template, redirect, request, Markup, url_for
 from flask.ext.login import login_required
 
 from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
-from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db, ox_tasks
+from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db
 from ox_herd import settings
 from ox_herd.core.plugins import manager as plugin_manager
 
