@@ -28,6 +28,7 @@ def delete_old_data(old_data):
 
 @OX_HERD_BP.route('/')
 @OX_HERD_BP.route('/index')
+@OX_HERD_BP.route('/show_index')
 @login_required
 def index():
     """Main page for ox_herd.
@@ -38,9 +39,8 @@ def index():
     commands = collections.OrderedDict([
         (name, Markup('<A HREF="%s">%s</A>' % (
             url_for('ox_herd.%s' % name), name))) for name in [
-                'show_task', 'list_tasks', 'show_scheduled', 'cancel_job',
-                'show_plugins', 'show_job', 'cleanup_job', 'requeue_job',
-                'show_task_log']])
+                'show_plugins', 'list_tasks', 'show_scheduled', 'show_task_log',
+                'cancel_job', 'cleanup_job']])
 
     return render_template('ox_herd/templates/intro.html', commands=commands)
 
@@ -117,7 +117,7 @@ def show_scheduled():
 def show_job():
     jid = request.args.get('jid', None)
     if not jid:
-        return redirect(url_for('ox_herd.show_scheduled'))
+        return redirect(url_for('ox_herd.index'))
     else:
         my_job = scheduling.OxScheduler.find_job(jid)
         ox_herd_task = getattr(my_job, 'kwargs', {}).get('ox_herd_task', None)
