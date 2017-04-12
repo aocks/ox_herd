@@ -2,9 +2,9 @@
 {% block body %}
 
 {% for plug_name, comp_list in components %}
-<div class="w3-light-grey w3-margin-bottom">  
+<div class="w3-light-grey w3-margin-bottom w3-row-padding">  
   <details>
-    <summary>{{ plug_name }}</summary>
+    <summary style="font-size:200%;">{{ plug_name }}</summary>
     <UL>
       {% for cmd, url in comp_list %}
       <LI><A HREF="{{url}}">{{cmd}}</A></LI>
