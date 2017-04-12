@@ -15,8 +15,8 @@ from flask.ext.login import login_required
 
 from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
 from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db, ox_tasks
-from ox_herd.ui.flask_web_ui.ox_herd import forms
 from ox_herd import settings
+from ox_herd.core.plugins import manager as plugin_manager
 
 from collections import namedtuple
 def d_to_nt(dictionary):
@@ -41,7 +41,7 @@ def index():
         (name, Markup('<A HREF="%s">%s</A>' % (
             url_for('ox_herd.%s' % name), name))) for name in [
                 'show_task', 'list_tasks', 'show_scheduled', 'cancel_job',
-                'schedule_job', 'show_job', 'cleanup_job', 'requeue_job',
+                'show_plugins', 'show_job', 'cleanup_job', 'requeue_job',
                 'show_task_log']])
 
     return render_template('ox_herd/templates/intro.html', commands=commands)
@@ -169,6 +169,53 @@ def requeue_job():
         requeue = scheduling.OxScheduler.requeue_job(jid)
     return render_template('requeue_job.html', jid=jid, requeue=requeue)
 
+
+
+@OX_HERD_BP.route('/show_plugins')
+@login_required
+def show_plugins():
+    actives = plugin_manager.PluginManager.get_active_plugins()
+    components = []
+    for name, plug in actives.items():
+        comp_list = plug.get_components()
+        logging.debug('Processing plugin %s.', name)
+        urls = [(c.cmd_name(), '%s?plugname=%s&plugcomp=%s' % (
+            url_for('ox_herd.use_plugin'), name, c.cmd_name()))
+                for c in comp_list]
+        components.append((name, urls))
+    return render_template('show_plugins.html', components=components)
+
+
+@OX_HERD_BP.route('/use_plugin', methods=['GET', 'POST'])
+@login_required
+def use_plugin():
+    plugname = request.args.get('plugname', '').strip()
+    plugcomp = request.args.get('plugcomp', '').strip()
+    plugdict = plugin_manager.PluginManager.get_active_plugins()
+    if plugname not in plugdict:
+        return 'FIXME: plugin named %s not found in %s' % (plugname, list(
+            plugdict))
+    myplug = plugdict[plugname]
+    compdict = dict([(c.cmd_name(), c) for c in myplug.get_components()])
+    if plugcomp not in compdict:
+        return 'FIXME: component named %s not found' % plugcomp
+    my_comp = compdict[plugcomp]
+    my_form_cls = my_comp.get_flask_form()
+    my_form = my_form_cls()
+    if my_form.validate_on_submit():
+        klass = my_comp.get_ox_task_cls()
+        info = klass(name=my_form.name.data)
+        my_form.populate_obj(info)
+        job = scheduling.OxScheduler.add_to_schedule(info, info.manager)
+        return redirect('%s?jid=%s' % (url_for('ox_herd.show_job'), job.id))
+    else:
+        template = my_comp.get_flask_form_template()
+        intro=Markup(markdown.markdown(my_form.__doc__, extensions=[
+            'fenced_code', 'tables']))
+        return render_template(
+            template, form=my_form, intro=intro, title=(
+                'Form for component %s of plugin %s' % (plugcomp, plugname)))
+            
 
 @OX_HERD_BP.route('/schedule_job', methods=['GET', 'POST'])
 @login_required
