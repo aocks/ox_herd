@@ -47,6 +47,7 @@ def _do_setup(args):
         args.host = '127.0.0.1'
 
     logging.getLogger('').setLevel(args.logging)
+    logging.info('Set log level to %s', args.logging)
 
 
 def _serve(args):
