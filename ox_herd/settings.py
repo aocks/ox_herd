@@ -20,3 +20,9 @@ RUN_DB = ('redis', None)
 
 # Prefix to use in things we store on redis queue for ox_herd.
 REDIS_PREFIX = 'ox_herd:'
+
+# List of names of plugins to enable. Each "name" is a string which
+# can be used in a python import statement. By default we enable the
+# pytest_plugin provided with ox_herd as an example.
+# See ox_herd/core/plugins.py for description of how plugins work.
+OX_PLUGINS = ['ox_herd.core.pytest_plugin']
