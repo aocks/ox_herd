@@ -19,8 +19,9 @@
 	{% endif %}
   </TR></TABLE>
   <UL>
-    <LI>URL : <A HREF="{{oh_task.url}}">
-	{{oh_task.url}}</A></LI>
+    {% if oh_task.url %}    
+    <LI>URL : <A HREF="{{oh_task.url}}"> {{oh_task.url}}</A></LI>
+    {% endif %}
     {% if oh_task.cron_string %}    
     <LI> Cron string : {{oh_task.cron_string}}</LI>
     {% endif %}
