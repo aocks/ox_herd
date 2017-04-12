@@ -65,7 +65,8 @@ def show_task_log():
     tasks = run_db.get_tasks(start_utc=start_utc, end_utc=end_utc)
     other = []
     task_dict = collections.OrderedDict([('started', []), ('finished', [])])
-    for item in tasks:
+    for item in reversed(sorted(
+            tasks, key=lambda t: (t.task_end_utc, t.task_start_utc))):
         if item.task_status in task_dict:
             task_dict[item.task_status].append(item)
         else:
