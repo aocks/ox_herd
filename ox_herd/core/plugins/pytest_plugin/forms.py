@@ -1,30 +1,12 @@
 """Forms for ox_herd commands.
 """
 
-import datetime
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField
-from wtforms import (BooleanField, DateField, DateTimeField, StringField, 
-                     RadioField, IntegerField, validators)
+from wtforms import (StringField, RadioField, IntegerField, validators)
 
-class GenericRecord:
-
-    def __init__(self, name=None, manager=None, **kw):
-        self.name = name
-        self.manager = manager
-        for key, value in kw.items():
-            setattr(self, key, value)
-
-    def pop(self, item_list):
-        "Pop given list of strings out of self using delattr and return as dict"
-        result = {}
-        for name in item_list:
-            if hasattr(self, name):
-                result[name] = getattr(self, name)
-                delattr(self, name)
-            else:
-                result[name] = None
-        return result
+#FIXME should probably have generic ox herd form with queue_name,
+#FIXME manager, cron_string, and name and have stuff like this
+#FIXME inherit from generic form and override as necessary
 
 class SchedJobForm(FlaskForm):
     """Use this form to enter parameters for a new job to schedule.
