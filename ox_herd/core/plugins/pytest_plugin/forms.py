@@ -1,50 +1,16 @@
 """Forms for ox_herd commands.
 """
 
-from flask_wtf import FlaskForm
-from wtforms import (StringField, RadioField, IntegerField, validators)
+from wtforms import StringField
+from ox_herd.core.plugins import base
 
-#FIXME should probably have generic ox herd form with queue_name,
-#FIXME manager, cron_string, and name and have stuff like this
-#FIXME inherit from generic form and override as necessary
-
-class SchedJobForm(FlaskForm):
-    """Use this form to enter parameters for a new job to schedule.
-
+class SchedJobForm(base.GenericOxForm):
+    """Use this form to enter parameters for a new pytest job to schedule.
     """
 
     url = StringField('url', [], description=(
         'Location for package to test. This can be a github URL or a file\n'
         'location.'))
-
-    name = StringField('name', [], default='test_', description=(
-        'String name for the job you are going to schedule.'))
-
-    queue_name = StringField('queue_name', [validators.DataRequired()], 
-                             default='', description=(
-        'String name for the job queue that the task will use.\n'
-        'Usually this is "default". If you use other names, you should\n'
-        'make sure you have the appropriate workers running for that queue.'))
-
-    manager = RadioField(
-        'manager', default='rq', choices=[(name, name) for name in [
-            'instant', 'rq']], description=(
-                'Backend implementation for test:\n\n'
-                'rq      : python-rq backend for automated background runs\n'
-                'instant : run instantly (useful for testing).'))
-
-    timeout = IntegerField(
-        'timeout', [], default=900, description=(
-            'Timeout in seconds to allow for tasks.'))
-
-    cron_string = StringField(
-        'cron_string', [], default='5 1 * * *', description=(
-            'Cron format string for when to schedule the task.\n'
-            'For example, "5 1 * * 3" would be every Wednesday at 1:05 am.\n'
-            'This is used for --manager choices such as rq which support cron\n'
-            'scheduling. NOTE: cron_string should have 5 fields. If you try \n'
-            'to use the non-standard extended cron format with 6 fields, you\n'
-            'may get unexpected results.'))
 
     pytest_cmd = StringField(
         'pytest_cmd', [], 
