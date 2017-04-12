@@ -31,7 +31,7 @@ class OxHerdBlueprint(Blueprint):
         
         """
         result = Blueprint.register(self, app, *args, **kwargs)
-        self.start_oh_plugins(app, *args, **kwargs)
+        self.start_oh_plugins(app)
         return result
         
     def start_oh_plugins(self, app):
