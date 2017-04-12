@@ -41,7 +41,7 @@ def login():
             login_user(user)
             next_url = request.args.get("next", '')
             next_url = next_url if next_url.strip().lower() != 'none' else (
-                url_for('ox_herd.show_scheduled'))
+                url_for('ox_herd.index'))
             return redirect(next_url)
         else:
             flash('Login failed; try again')
