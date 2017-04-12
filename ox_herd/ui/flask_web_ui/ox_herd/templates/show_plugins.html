@@ -1,6 +1,14 @@
 {% extends "ox_layout.html" %}
 {% block body %}
 
+
+<div class="w3-teal w3-margin-bottom w3-panel">
+  <h2>Available Plugins</h2>
+  <p>
+    Click on the name of a plugin to expand and use its components.
+  </p>
+</div>
+
 {% for plug_name, comp_list in components %}
 <div class="w3-light-grey w3-margin-bottom w3-row-padding">  
   <details>
