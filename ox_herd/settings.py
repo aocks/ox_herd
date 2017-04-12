@@ -25,4 +25,7 @@ REDIS_PREFIX = 'ox_herd:'
 # can be used in a python import statement. By default we enable the
 # pytest_plugin provided with ox_herd as an example.
 # See ox_herd/core/plugins.py for description of how plugins work.
-OX_PLUGINS = ['ox_herd.core.pytest_plugin']
+OX_PLUGINS = [
+    'ox_herd.core.plugins.pytest_plugin',
+    'ox_herd.core.plugins.example_psutil_plugin'
+    ]
