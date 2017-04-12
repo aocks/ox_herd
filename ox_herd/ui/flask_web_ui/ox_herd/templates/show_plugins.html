@@ -1,0 +1,17 @@
+{% extends "ox_layout.html" %}
+{% block body %}
+
+{% for plug_name, comp_list in components %}
+<div class="w3-light-grey w3-margin-bottom">  
+  <details>
+    <summary>{{ plug_name }}</summary>
+    <UL>
+      {% for cmd, url in comp_list %}
+      <LI><A HREF="{{url}}">{{cmd}}</A></LI>
+      {% endfor %}
+    </UL>
+    </details>
+</div>
+{% endfor %}
+
+{% endblock %}
