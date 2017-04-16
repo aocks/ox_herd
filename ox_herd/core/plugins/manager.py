@@ -73,7 +73,8 @@ class PluginManager(object):
                         len(klasses), [pair[0] for pair in klasses])))
                 raise ValueError(msg)
             else:
-                return plugins[0][1]()
+                instances = [c[1](name=c[0]) for c in components]
+                return klasses[0][1](components=instances)
         if components:
             instances = [c[1](name=c[0]) for c in components]
             my_plugin = base.TrivialOxPlugin(instances, name, (
