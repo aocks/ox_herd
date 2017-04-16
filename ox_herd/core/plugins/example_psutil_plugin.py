@@ -4,13 +4,9 @@ This is module serves as an example of how to create an ox_herd plugin.
 It provides a single class: CheckCPU which uses the psutil module (which
 you may have to install on your system if you don't have it already).
 
-The CheckCPU class inherits from OxHerdTask to indicate that it is a
-task ox_herd can run and provides the main_call classmethod to actually
-run the task. It also inherits from OxPluginComponent to indicate that
-it is a plugin component.
-
 Provided that you include this plugin in the OX_PLUGINS variable in
-ox_herd.settings, this will be picked up automatically and used as a plugin.
+ox_herd.settings or in your OX_PLUGINS environment variable, this will be 
+picked up automatically and used as a plugin.
 
 In general, there are a variety of more complicated things you can do
 in configuring plugins. See documentation on plugins or see the pytest_plugin
@@ -18,22 +14,16 @@ example for more details.
 """
 
 import json
-
 import psutil
 
 from ox_herd.core.plugins import base
-from ox_herd.core import ox_tasks
 
-class CheckCPU(ox_tasks.OxHerdTask, base.OxPluginComponent):
+
+class CheckCPU(base.OxPlugTask):
     """Class to check and report CPU usage.
 
     This is meanly meant to serve as an example of a minimal plugin.
-    Things to note are:
-
-       1. We inherit from OxHerdTask and implement main_call to indicate
-          the task that this plugin component does.
-       2. We inherit from OxPluginComponent to indicate this is a plugin
-          component.
+    All we do is implement the main_call method.
     """
 
     @classmethod
