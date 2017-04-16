@@ -35,11 +35,11 @@ class CheckCPU(ox_tasks.OxHerdTask, base.OxPluginComponent):
        2. We inherit from OxPluginComponent to indicate this is a plugin
           component.
     """
-    
+
     @classmethod
     def main_call(cls, my_task):
         """Main method to lookup CPU usage.
-        
+
         :arg my_task:   Instance of a CheckCPU task perhaps containing
                         additional data (e.g., my_task.name). If your
                         main_call does not need arguments, you can basically
@@ -47,16 +47,16 @@ class CheckCPU(ox_tasks.OxHerdTask, base.OxPluginComponent):
                         to pass in arguments, see a more detailed discussion
                         of how to get arguments from the user and configure
                         a task in the full plugin documentation.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         :returns:       Dictionary with 'return_value' and 'json_blob' as
                         required for OxPluginComponent.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:        Use the psutil module to lookup CP usage.
-        
+
         """
         cpu = psutil.cpu_percent()
         pids = len(psutil.get_pid_list())
