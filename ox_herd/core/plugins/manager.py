@@ -1,6 +1,7 @@
 """Module for managing ox_herd plugins.
 """
 
+import os
 import logging
 import inspect
 import importlib
@@ -14,7 +15,14 @@ class PluginManager(object):
 
     @classmethod
     def activate_plugins(cls):
-        active_names = settings.OX_PLUGINS
+        """Activate plugins.
+        """
+        active_names = list(settings.OX_PLUGINS)
+        active_set = set(active_names)
+        env_plugs = os.getenv('OX_PLUGINS', '').split(':')
+        for name in env_plugs:
+            if name not in active_set:
+                active_names.append(name)
         for name in active_names:
             if name in cls.__active_plugins:
                 raise ValueError('Plugin %s already activated' % name)

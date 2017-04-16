@@ -120,3 +120,17 @@ class OxPluginComponent(object):
         """
         dummy = self # suppress pylint warnings
         return 'ox_wtf.html'
+
+class OxPlugTask(ox_tasks.OxHerdTask, base.OxPluginComponent):
+    """Example class to show how to make the simplest plugin.
+
+    This is meanly meant to serve as an example of a minimal plugin.
+    Things to note are:
+
+       1. We inherit from OxHerdTask and implement main_call to indicate
+          the task that this plugin component does.
+       2. We inherit from OxPluginComponent to indicate this is a plugin
+          component.
+    """
+
+    pass
