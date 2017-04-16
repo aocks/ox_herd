@@ -142,3 +142,15 @@ class OxScheduler(object):
             return all_jobs
         else:
             return [j for j in all_jobs if j.origin in allowed_queues]
+
+
+    @classmethod
+    def add_task_if_unscheduled(cls, task_list):
+        scheduled_jobs = cls.get_scheduled_jobs()
+        sj_dict = dict([(item.name, item) for item in scheduled_jobs])
+        for task in task_list:
+            if task.name in sj_dict:
+                logging.info('Not scheduling %s since already scheduled.',
+                             task.name)
+            else:
+                cls.add_to_schedule(task, task.manager)
