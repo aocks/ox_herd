@@ -60,7 +60,7 @@ class GenericOxForm(FlaskForm):
     name = StringField('name', [], default='test_', description=(
         'String name for the job you are going to schedule.'))
 
-    queue_name = StringField('queue_name', [validators.DataRequired()], 
+    queue_name = StringField('queue_name', [validators.DataRequired()],
                              default='', description=(
         'String name for the job queue that the task will use.\n'
         'Usually this is "default". If you use other names, you should\n'
@@ -98,7 +98,7 @@ class OxPluginComponent(object):
 
     def get_flask_form(self):
         """Return a sub-classs of GenericOxForm allowing user to configure  job.
-        
+
         Can return None if configuring job via Flask form not allowed.
         """
         return GenericOxForm
@@ -120,5 +120,3 @@ class OxPluginComponent(object):
         """
         dummy = self # suppress pylint warnings
         return 'ox_wtf.html'
-
-
