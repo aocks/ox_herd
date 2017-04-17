@@ -21,11 +21,12 @@ class PluginManager(object):
         active_set = set(active_names)
         env_plugs = os.getenv('OX_PLUGINS', '').split(':')
         for name in env_plugs:
-            if name not in active_set:
+            if name and name not in active_set:
                 active_names.append(name)
         for name in active_names:
             if name in cls.__active_plugins:
                 raise ValueError('Plugin %s already activated' % name)
+            logging.info('Importing %s', name)
             my_mod = importlib.import_module(name)
             plug = cls.make_plugin_from_module(name, my_mod)
             assert isinstance(plug, base.OxPlugin)
