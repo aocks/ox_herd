@@ -68,10 +68,13 @@ class OxScheduler(object):
         rq_kw = dict([(name, getattr(my_args, name)) 
                       for name in my_args.rq_fields])
         rq_kw.pop('cron_string') # launching now so get rid of cron_string
-        my_queue = rq.Queue(rq_kw.pop('queue_name'), connection=Redis())
+        queue_name = rq_kw.pop('queue_name')
+        my_queue = rq.Queue(queue_name, connection=Redis())
+        my_func = rq_kw.pop('func')
         new_job = my_queue.enqueue(
-            rq_kw.pop('func'), kwargs={'ox_herd_task' : my_args}, **rq_kw)
-        logging.warning('Launching new job with args' + str(my_args))
+            my_func, kwargs={'ox_herd_task' : my_args}, **rq_kw)
+        logging.info('Launched job on q=%s with kwargs=%s; rq_kw=%s',
+                     queue_name, my_args, rq_kw)
 
         return new_job
 
@@ -145,12 +148,17 @@ class OxScheduler(object):
 
 
     @classmethod
-    def add_task_if_unscheduled(cls, task_list):
+    def add_task_if_unscheduled(cls, task_list, manager='rq'):
         scheduled_jobs = cls.get_scheduled_jobs()
-        sj_dict = dict([(item.name, item) for item in scheduled_jobs])
+        sj_dict = {}
+        for item in scheduled_jobs:
+            task = item.kwargs['ox_herd_task']
+            assert task.name not in sj_dict
+            sj_dict[task.name] = task
         for task in task_list:
             if task.name in sj_dict:
                 logging.info('Not scheduling %s since already scheduled.',
                              task.name)
             else:
-                cls.add_to_schedule(task, task.manager)
+                logging.info('Adding %s to schedule.', task.name)
+                cls.add_to_schedule(task, manager)
