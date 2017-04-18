@@ -221,22 +221,21 @@ def use_plugin():
 def schedule_job():
 
     jid = request.args.get('jid', None)
-    if jid and request.method == 'GET':
-        my_job = scheduling.OxScheduler.find_job(jid)
-        my_args = my_job.kwargs.get('ox_herd_task', None)
-        if my_args is None:
-            raise ValueError("job %s had no kwargs['ox_herd_task']"%str(my_job))
-        my_args = copy.deepcopy(my_args)
-        my_form = forms.SchedJobForm(obj=my_args)
-        my_form.name.data += '_copy'
-    else:
-        my_form = forms.SchedJobForm()
+    my_job = scheduling.OxScheduler.find_job(jid)
+    my_args = my_job.kwargs.get('ox_herd_task', None)
+    if my_args is None:
+        raise ValueError("job %s had no kwargs['ox_herd_task']"%str(my_job))
+    my_args = copy.deepcopy(my_args)
+    my_form_cls = my_args.get_flask_form()
+    my_form = my_form_cls(obj=my_args)
 
     if my_form.validate_on_submit():
-        info = simple_ox_tasks.RunPyTest(name='not_yet_named')
-        my_form.populate_obj(info)
-        job = scheduling.OxScheduler.add_to_schedule(info, info.manager)
+        my_form.populate_obj(my_args)
+        job = scheduling.OxScheduler.add_to_schedule(my_args, getattr(
+            my_args, 'manager', 'rq'))
         return redirect('%s?jid=%s' % (url_for('ox_herd.show_job'), job.id))
+
+    my_form.name.data += '_copy' # change name to add _copy if making new job
 
     return render_template(
         'ox_wtf.html', form=my_form, title='Schedule Test',
