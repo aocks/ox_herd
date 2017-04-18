@@ -9,7 +9,7 @@
     <TH>Status</TH>
     <TH>Result</TH>
     <TH>Finished at</TH>
-    {% for item in tasks %}
+    {% for item in tasks|sort(reverse=True, attribute='task_end_utc') %}
     <TR>
       <TD>{{ item.task_name }}</TD>
       <TD>
