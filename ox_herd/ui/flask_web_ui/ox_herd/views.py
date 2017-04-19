@@ -242,3 +242,20 @@ def schedule_job():
         intro=Markup(markdown.markdown(my_form.__doc__, extensions=[
             'fenced_code', 'tables'])))
 
+
+@OX_HERD_BP.route('/delete_task_from_db')
+@login_required
+def delete_task_from_db():
+    """Delete a task from the task database.
+
+    This is mainly intended to be used from the task list and not so
+    useful directly since it requires the task_id.
+    """
+    task_id = request.args.get('task_id', None)
+    if task_id:
+        run_db = ox_run_db.create()
+        run_db.delete_task(task_id)
+        return render_template('generic_display.html', commentary=(
+            'Delete task with id %s from database.' % task_id))
+    return render_template('generic_display.html', commentary=(
+        'Found no task_id so cannot do anything.'))
