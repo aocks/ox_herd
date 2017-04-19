@@ -27,5 +27,6 @@ REDIS_PREFIX = 'ox_herd:'
 # See ox_herd/core/plugins.py for description of how plugins work.
 OX_PLUGINS = [
     'ox_herd.core.plugins.pytest_plugin',
-    'ox_herd.core.plugins.example_psutil_plugin'
+    'ox_herd.core.plugins.pylint_plugin',
+    'ox_herd.core.plugins.example_psutil_plugin',
     ]
