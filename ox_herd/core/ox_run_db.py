@@ -69,6 +69,19 @@ class RunDB(object):
         """
         raise NotImplementedError
 
+    def delete_task(self, task_id):
+        """Delete the task from the database.
+        
+        :arg task_id:        ID for task as returned by record_task_start.
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        PURPOSE:   Delete the task.
+        
+        """
+        raise NotImplementedError
+
+
     def get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
         
@@ -184,6 +197,12 @@ class RedisRunDB(RunDB):
             add_result, task_id)
 
         return task_id
+
+    def delete_task(self, task_id):
+        """Delete desired id.
+        """
+        task_key = self.task_master + task_id
+        self.conn.delete(task_key)
 
     def get_task_info(self, task_id):
         """Return dict representation of task with given task_id or None.
@@ -343,6 +362,13 @@ class SqliteRunDB(RunDB):
         assert task_id is not None, (
             'Expected 1 task id for insert but got %s' % str(task_id))
         return task_id
+
+    def delete_task(self, task_id):
+        """Delete desired id.
+        """
+        sql = '''DELETE FROM task_info WHERE task_id = ?'''
+        self.conn.execute(sql, task_id)
+
 
     def record_task_finish(self, task_id, return_value, status='finished',
                            json_blob=None, pickle_blob=None):
