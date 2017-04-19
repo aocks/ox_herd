@@ -11,6 +11,8 @@ import os
 from flask import Flask, redirect, url_for
 from flask.ext.login import LoginManager, UserMixin, login_required
 
+from ox_herd import settings as ox_herd_settings
+
 DEFAULT_PORT = 4111
 
 def prepare_parser(parser):
@@ -20,6 +22,11 @@ def prepare_parser(parser):
         'Use 1 for debug mode else 0; cannot have host=0.0.0.0 w/debug'))
     parser.add_argument('--host', default='0.0.0.0', help=(
         'IP address for allowed host (0.0.0.0 for all access).'))
+    parser.add_argument('--plugin', action='append', help=(
+        'You can provide as many --plugin options as you like. Each\n'
+        'must be the path to an ox herd plugin to enable. For example\n'
+        'providing "--plugin ox_herd.core.plugins.pytest_plugin" would\n'
+        'enable the pytest plugin if it was not already enabled.'))
     parser.add_argument('--port', default=DEFAULT_PORT, help=(
         'IP port to listen on.'))
     parser.add_argument('--base_url', help=(
@@ -48,7 +55,18 @@ def _do_setup(args):
 
     logging.getLogger('').setLevel(args.logging)
     logging.info('Set log level to %s', args.logging)
+    plug_set = set(args.plugins)
+    if len(plug_set) < len(args.plugins):
+        raise ValueError('Duplicates in args.plugins = %s' % args.plugins)
+    cur_plugs = set(ox_herd_settings.OX_PLUGINS)
 
+    for item in args.plugins:
+        if item not in cur_plugs:
+            logging.info('Adding plugin %s to OX_PLUGINS.', item)
+            ox_herd_settings.OX_PLUGINS.append(item)
+        else:
+            logging.info(
+                'Not adding plugin %s to OX_PLUGINS since already there.', item)
 
 def _serve(args):
     "Run the server. Should only be called by run after doing setup."
