@@ -1,0 +1,75 @@
+{% extends "ox_layout.html" %}
+{% block body %}
+
+<H1>Task Report for run pylint</H1>
+<div class="w3-light-grey w3-margin-bottom">
+  <div>
+    <TABLE cellpadding="10">
+      <TH>Lint report</TH>
+      <TH>Issues</TH>
+      <TH>Passed</TH>
+      <TH>Failures</TH>
+      <TH>Created at</TH>
+      <TR>
+	<TD>{{ task_data.task_name }}</TD>
+	<TD>{{ task_data.json_data['summary']['issues'] }}</TD> 
+	<TD>{{ task_data.json_data['summary']['passed'] }}</TD> 
+	<TD>{{ task_data.json_data['summary']['failures'] }}</TD> 
+	<TD>{{ task_data.json_data['created_at'] }}</TD> 
+      </TR>
+    </TABLE>
+  </div>
+</div>
+
+<div class="w3-row-padding" style="max-width:1400px">
+  <div class="w3-container w3-light-grey">
+    <details open>
+      <summary>
+	<b>Issues for {{ task_data.json_data['url'] }}</b>
+      </summary>
+      {% set issue_num = 0 %}	
+      {% for item in task_data.json_data['lints'] %}
+      {% if item.outcome == 'issues' %}
+      <details>
+	{% set issue_num = issue_num + 1 %}
+	<summary>{{('%i'%issue_num).zfill(3)}} -- {{ item.file }}</summary>
+	<TABLE><TH>Line</TH><TH>Problem</TH>
+	  {% for thing in item.issues %}
+	  <TR><TD>{{ thing[1] }}</TD><TD>{{ thing[2] }}</TD></TR>
+	  {% endfor %}
+	</TABLE>
+      </details>
+      {% else %}
+      {% endif %}
+      {% endfor %}
+    </details>
+  </div>
+</div>
+
+
+<div class="w3-row-padding" style="max-width:1400px">
+  <div class="w3-container w3-light-grey">
+    <details open>
+      <summary>
+	<b>Failures</b>
+      </summary>
+      {% set failure_num = 0 %}	
+      {% for item in task_data.json_data['lints'] %}
+      {% if item.outcome == 'failed' %}
+      <details>
+	{% set failure_num = failure_num + 1 %}
+	<summary>{{('%i'%failure_num).zfill(3)}} -- {{ item.name }}</summary>
+	{% for piece in ['setup', 'call', 'teardown'] %}
+	{% if item[piece].outcome == 'failed' %}
+	<br><PRE>{{ item[piece].longrepr }}</PRE><br>
+	{% endif %}
+	{% endfor %}
+      </details>
+      {% else %}
+      {% endif %}
+      {% endfor %}
+    </details>
+  </div>
+</div>
+
+{% endblock %}
