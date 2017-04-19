@@ -20,6 +20,10 @@
       <TD>{{ item.task_status }}</TD>
       <TD>{{ item.return_value }}</TD>
       <TD>{{ item.task_end_utc }}</TD>
+      <TD>
+	<A HREF="{{ url_for('ox_herd.delete_task_from_db') 
+		 + '?task_id='+item.task_id}}">delete</A>
+      </TD>
     </TR>
     {% endfor %}
   </TABLE>
