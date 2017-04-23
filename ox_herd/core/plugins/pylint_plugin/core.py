@@ -58,6 +58,7 @@ def make_kill_regexps():
     those.
     """
     result = {
+        'long_dash': r'^-+ *',
         'pylint_rating' : '^[Yy]our code has been rated.*$'
     }
     return result
@@ -121,7 +122,7 @@ class RunPyLint(OxHerdTask, base.OxPluginComponent):
         """Take string output of lint command and return dictionary summary.
         """
         data = [line for line in lint_output.split('\n') if (
-            line and line[:10] != ('*'*10))]
+            line and line.strip() and line[:10] != ('*'*10))]
         if not data:
             return {'outcome' : 'success'}
         result = {'outcome' : 'issues', 'count' : len(data), 
