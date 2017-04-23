@@ -51,6 +51,18 @@ class OxHerdPyLintPlugin(base.OxPlugin):
     def get_components(self):
         return [RunPyLint('plugin component')]
 
+def make_kill_regexps():
+    """Make dictionary identifying regular expressions to remove from output.
+
+    Some of the checkers provide results that confuse pylint. So we remove
+    those.
+    """
+    result = {
+        'pylint_rating' : '^[Yy]our code has been rated.*$'
+    }
+    return result
+
+
 class RunPyLint(OxHerdTask, base.OxPluginComponent):
     """Run pylint to analyze code quality
     """
@@ -89,7 +101,12 @@ class RunPyLint(OxHerdTask, base.OxPluginComponent):
         lint.Run([filename]+args, 
                  reporter=ParseableTextReporter(pylint_output), exit=False)
         pylint_output.seek(0)
-        return pylint_output.read()
+        result = pylint_output.read()
+        kill_regexps = make_kill_regexps()
+        for re_name, my_re in kill_regexps.items():
+            logging.debug('Cleaning output with re %s', re_name)
+            result = re.sub(my_re, '', result, flags=re.M)
+        return result
 
     @classmethod
     def main_call(cls, ox_herd_task):
