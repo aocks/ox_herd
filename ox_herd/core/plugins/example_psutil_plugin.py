@@ -5,7 +5,7 @@ It provides a single class: CheckCPU which uses the psutil module (which
 you may have to install on your system if you don't have it already).
 
 Provided that you include this plugin in the OX_PLUGINS variable in
-ox_herd.settings or in your OX_PLUGINS environment variable, this will be 
+ox_herd.settings or in your OX_PLUGINS environment variable, this will be
 picked up automatically and used as a plugin.
 
 In general, there are a variety of more complicated things you can do
@@ -27,13 +27,13 @@ class CheckCPU(base.OxPlugTask):
     """
 
     @classmethod
-    def main_call(cls, my_task):
+    def main_call(cls, ox_herd_task):
         """Main method to lookup CPU usage.
 
-        :arg my_task:   Instance of a CheckCPU task perhaps containing
-                        additional data (e.g., my_task.name). If your
+        :arg ox_herd_task:   Instance of a CheckCPU task perhaps containing
+                        additional data (e.g., ox_herd_task.name). If your
                         main_call does not need arguments, you can basically
-                        just ignore my_task. If you do want to be able
+                        just ignore ox_herd_task. If you do want to be able
                         to pass in arguments, see a more detailed discussion
                         of how to get arguments from the user and configure
                         a task in the full plugin documentation.
@@ -49,9 +49,14 @@ class CheckCPU(base.OxPlugTask):
 
         """
         cpu = psutil.cpu_percent()
-        pids = len(psutil.get_pid_list())
-        data = {'cpu_percent' : cpu, 'num_pids' : pids}
+        pid_func = getattr(psutil, 'get_pid_list', getattr(psutil, 'pids'))
+        if pid_func is None:
+            raise ValueError(
+                'Do not know how to get pids with version %s of psutil' % (
+                    getattr(psutil, '__version__', 'unknown')))
+        pids = len(pid_func())
+        data = {'cpu_percent': cpu, 'num_pids': pids}
         return {
-            'return_value' : 'Task %s completed succesfully: cpu=%s' % (
-                my_task.name, cpu), 'json_blob' : json.dumps(data)
+            'return_value': 'Task %s completed succesfully: cpu=%s' % (
+                ox_herd_task.name, cpu), 'json_blob': json.dumps(data)
             }
