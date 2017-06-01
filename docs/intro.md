@@ -19,5 +19,5 @@ Some other alternatives for python include Celery and python rq.  The ox_herd pa
 
 See the following for more detailed discussions:
 
-  1. [plugins.md](https://github.com/aocks/ox_herd/edit/master/docs/plugins.md): A discussion on how to write your own ox_herd plugins.
+  1. [plugins.md](https://github.com/aocks/ox_herd/blob/master/docs/plugins.md): A discussion on how to write your own ox_herd plugins.
 
