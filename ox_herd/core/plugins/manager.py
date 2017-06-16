@@ -25,7 +25,8 @@ class PluginManager(object):
                 active_names.append(name)
         for name in active_names:
             if name in cls.__active_plugins:
-                raise ValueError('Plugin %s already activated' % name)
+                logging.warning('Plugin %s already activated; skipping', name)
+                continue
             logging.info('Importing %s', name)
             my_mod = importlib.import_module(name)
             plug = cls.make_plugin_from_module(name, my_mod)
