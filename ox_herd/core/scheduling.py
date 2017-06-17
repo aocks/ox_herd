@@ -153,7 +153,8 @@ class OxScheduler(object):
         sj_dict = {}
         for item in scheduled_jobs:
             task = item.kwargs['ox_herd_task']
-            assert task.name not in sj_dict
+            if task.name in sj_dict:
+                logging.warning('Task %s seen multiple times.', task.name)
             sj_dict[task.name] = task
         for task in task_list:
             if task.name in sj_dict:
