@@ -65,18 +65,40 @@ class OxScheduler(object):
         old_job = cls.find_job(job_id)
         old_args = old_job.kwargs['ox_herd_task']
         my_args = old_args.make_copy(old_args)
-        rq_kw = dict([(name, getattr(my_args, name)) 
-                      for name in my_args.rq_fields])
-        rq_kw.pop('cron_string') # launching now so get rid of cron_string
+        return cls.launch_raw_task(my_args)
+
+    @staticmethod
+    def launch_raw_task(raw_task):
+        """Launch an OxHerdTask instance into python rq.
+        
+        :arg raw_task:    OxHerdTask instance to run.
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        :returns:  Newly launched job.
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        PURPOSE:   Make it easy to launch an OxHerdTask into python rq
+                   right now instead of waiting for cron or scheduler.
+        
+        """
+        rq_kw = dict([(name, getattr(raw_task, name)) 
+                      for name in raw_task.rq_fields])
+        if 'cron_string' in rq_kw:
+            rq_kw.pop('cron_string')  # launching now so get rid of cron_string
+
         queue_name = rq_kw.pop('queue_name')
         my_queue = rq.Queue(queue_name, connection=Redis())
         my_func = rq_kw.pop('func')
         new_job = my_queue.enqueue(
-            my_func, kwargs={'ox_herd_task' : my_args}, **rq_kw)
+            my_func, kwargs={'ox_herd_task' : raw_task}, **rq_kw)
         logging.info('Launched job on q=%s with kwargs=%s; rq_kw=%s',
-                     queue_name, my_args, rq_kw)
+                     queue_name, raw_task, rq_kw)
 
         return new_job
+
+        
 
     @staticmethod
     def find_job(target_job):
