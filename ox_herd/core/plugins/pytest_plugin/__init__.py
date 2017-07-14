@@ -2,8 +2,6 @@
 """
 
 import logging
-import tempfile
-import json
 
 from flask import Blueprint, request
 from ox_herd.core.plugins.pytest_plugin.core import (
@@ -16,35 +14,35 @@ OxHerdPyTestPlugin.set_bp(OH_BP)
 @OH_BP.route('/ox_herd/pytest', methods=['GET', 'POST'])
 def pytest():
     """Route for launching pytest directly.
+    
+    This route is intended to be called by a github webhook to process
+    pull requests. It uses information from the request to create an
+    instance of RunPyTest and then launch that job immediately.
     """
+    if request.headers['Content-Type'] != 'application/json':
+        raise ValueError('Can only process application/json not %s=%s' % (
+            'Content-Type', request.headers['Content-Type']))
+                         
+    event = request.headers['X-Github-Event']
+    if event != 'pull_request':
+        # Only process pull_request.
+        logging.debug('skipping github event %s', event)
+        return 'skipped event %s' % str(event)
+    if event == 'issue_comment':
+        raise ValueError('Triggering on issue_comment can cause inf loop')
+
     try:
-        logging.error('FIXME: got pytest request %s', '\n'.join(
-            map(str, request.form.items())))
-        event = request.headers['X-Github-Event']
-        if event != 'pull_request':
-            # Only process pull_request.
-            logging.error('FIXME: skipping event %s', event)
-            return 'skipped'
-        if event == 'issue_comment':
-            raise ValueError('Triggering on issue_comment can cause inf loop')
-        payload = json.loads(request.form['payload'])
-        my_dir = tempfile.mkdtemp(suffix='.git')
-        from git import Repo
-        my_repo = Repo.clone_from(payload['repository']['ssh_url'], my_dir)
-        my_pr = payload['pull_request']
-        sha = my_pr['head']['sha']                
-        my_repo.git.checkout(sha)
-        name = 'github_pr_pytest_%s_%s' % (sha[:10], my_pr['updated_at'])
-        task = RunPyTest(
-            name=name, url='file://%s' % my_dir, 
-            pytest_cmd='--doctest-modules',
-            github_info=my_pr)
-        my_job = OxScheduler.launch_raw_task(task)
-        logging.error('FIXME: scheduled task %s as job %s', str(task), my_job)
+        task = RunPyTest.make_task_from_request(request)
     except Exception as problem:
-        logging.error('drop to pdb because: %s', str(problem))
+        logging.error('RunPyTest.make_task_from_request exception:\n%s\n',
+                      problem)
         raise
-    return 'FIXME: launched pytest'    
+    my_job = OxScheduler.launch_raw_task(task)
+    msg = 'scheduled task from github %s as job %s' % (str(task), my_job)
+    logging.debug(msg)
+
+    return msg
+
 
 def get_ox_plugin():
     """Required function for module to provide plugin.
