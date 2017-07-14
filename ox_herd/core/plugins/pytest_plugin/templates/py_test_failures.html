@@ -1,0 +1,32 @@
+
+{# 
+   This template requires you to define or pass in the variable test_list
+   to be a list of dictionaries with keys of name, setup, call, teardown
+   describing results of tests. Only items with outcome == 'failed' will
+   be displayed.
+#}
+<details open>
+  <summary>
+    <b>Failures</b>
+  </summary>
+  {% set failure_num = 0 %}	
+  {% for item in test_list %}
+  {% if item.outcome == 'failed' %}
+  {# For this to look right on github, need no spaces before tags #}
+<!-- *IMPORTANT*: to look right on github, need no spaces before tags -->
+<details class="w3-red">{% set failure_num = failure_num + 1 %}
+<summary>{{('%i'%failure_num).zfill(3)}} -- {{ item.name }}</summary>
+{% for piece in ['setup', 'call', 'teardown'] %}
+{% if item[piece].outcome == 'failed' %}
+<br>
+<PRE>
+{{ item[piece].longrepr }}
+</PRE>
+<br>
+{% endif %}
+{% endfor %}
+</details>
+{% else %}
+{% endif %}
+{% endfor %}
+</details>

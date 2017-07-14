@@ -11,6 +11,8 @@ import urllib
 import urllib.parse
 import urllib.request
 
+import jinja2
+
 import pytest
 
 from ox_herd.core.plugins import base
@@ -163,7 +165,11 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
             if item['outcome'] == 'failed':
                 failures.append(item['name'])
         if failures:
-            msg += '\n## Failures:\n\n  - ' + '\n  - '.join(failures) + '\n'
+            msg += '\n\n' + jinja2.Environment(loader=jinja2.FileSystemLoader(
+                os.path.dirname(forms.__file__).rstrip(
+                    '/') + '/templates/')).get_template(
+                        'py_test_failures.html').render(
+                            test_list=test_data['tests'])
 
         cthread.add_comment(msg, allow_create=True)
 
