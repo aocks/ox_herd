@@ -17,4 +17,4 @@ rq-scheduler==0.7.0
 Markdown==2.6.8
 blinker==1.4
 passlib==1.7.1
-xmltodict=0.11.0
+xmltodict==0.11.0
