@@ -14,7 +14,7 @@ from flask.ext.login import LoginManager, UserMixin, login_required
 
 from ox_herd import settings as ox_herd_settings
 
-DEFAULT_PORT = 4111
+DEFAULT_PORT = 6617
 
 def prepare_parser(parser):
     "Prepare an arg parser to read command line."
