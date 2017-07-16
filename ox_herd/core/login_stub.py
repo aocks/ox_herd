@@ -38,7 +38,6 @@ def login():
         username = request.form['username']
         password = request.form['password']
         password_hash = settings.STUB_USER_DB.get('username', 'disabled')
-        import pdb; pdb.set_trace()#FIXME
         if password_hash != 'disabled' and pwd_context.verify(
                 password, password_hash):
             user = User(username)
