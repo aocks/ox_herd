@@ -22,9 +22,9 @@ class SchedJobForm(base.GenericOxForm):
             'to get pytest working as you like. This will be passed through\n'
             'shlex.split.\n'))
     
-    json_file = StringField(
-        'json_file', [], description=(
-            'Optional path to json file for output of test run. Usually,\n'
+    xml_file = StringField(
+        'xml_file', [], description=(
+            'Optional path to xml file for output of test run. Usually,\n'
             'you should not provide this and a temp file will be used\n'
             'and then deleted. If you do manually specify a path, then that\n'
             'path will be used and *NOT* deleted (which can be useful\n'
