@@ -38,8 +38,9 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username in settings.STUB_USER_DB and (pwd_context.verify(
-                password, settings.STUB_USER_DB[username])):
+        password_hash = settings.STUB_USER_DB.get('username', 'disabled')
+        if username in settings.STUB_USER_DB and pwd_context.verify(
+                password, password_hash):
             user = User(username)
             login_user(user)
             next_url = request.args.get("next", '')
