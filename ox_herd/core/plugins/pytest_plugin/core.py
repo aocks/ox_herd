@@ -18,7 +18,7 @@ import jinja2
 import xmltodict
 
 
-
+from ox_herd import settings as ox_herd_settings
 from ox_herd.core.plugins import base
 from ox_herd.core.ox_tasks import OxHerdTask
 from ox_herd.core.plugins.pytest_plugin import forms
@@ -274,8 +274,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
     def get_conf_file():
         "Helper to deduce config file."
 
-        return os.environ.get('OX_HERD_CONF', os.path.join(
-            os.environ.get('HOME', ''), '.ox_herd_conf'))
+        return ox_herd_settings.OX_HERD_CONF
 
 
     @staticmethod
