@@ -7,6 +7,8 @@ services:
       args:
         - GITHUB_USER
         - GITHUB_TOKEN
+        - OX_WEB_USER
+        - OX_PASSWD_HASH
     ports:
       - '6617:6617'
     image: ox_herd_image

@@ -12,6 +12,13 @@ ARG GITHUB_TOKEN
 RUN echo "checking if gave GITHUB_USER build arg" && test -n "$GITHUB_USER"
 RUN echo "checking if gave GITHUB_TOKEN build arg" && test -n "$GITHUB_TOKEN"
 
+# We need OX_WEB_USER and OX_PASSWD_HASH if you want to be able to login
+# to the server without manually providing a user/password database.
+ARG OX_WEB_USER=disabled
+ARG OX_PASSWD_HASH=disabled
+
+
+
 # Need to do an apt-get update early on or lots of things won't work.
 RUN apt-get update
 
@@ -35,21 +42,25 @@ RUN useradd -ms /bin/bash ox_user && \
   usermod -g www-data ox_user && \
   usermod -a -G www-data ox_user && \
   echo "[pytest/DEFAULT]" > /home/ox_user/.ox_herd_conf && \
-  echo "github_user = $GITHUB_USER >> /home/ox_user/.ox_herd_conf && \
-  echo "github_token = $GITHUB_TOKEN >> /home/ox_user/.ox_herd_conf && \
+  echo "github_user = $GITHUB_USER" >> /home/ox_user/.ox_herd_conf && \
+  echo "github_token = $GITHUB_TOKEN" >> /home/ox_user/.ox_herd_conf && \
+  echo "[STUB_USER_DB]" > /home/ox_user/.ox_herd_conf && \
+  echo "$OX_WEB_USER = $OX_PASSWD_HASH" >> /home/ox_user/.ox_herd_conf && \
+  echo "# Include some profile setting items" >> /home/ox_user/.profile && \
   echo "export LC_ALL=C.UTF-8" >> /home/ox_user/.profile && \
   echo "export LANG=C.UTF-8" >> /home/ox_user/.profile && \
   echo "export PYTHONPATH=/home/ox_user/ox_server/ox_herd:/home/ox_user/ox_server/ox_herd/ox_herd" \
     >> /home/ox_user/.profile
 
+
+# Setup log directory and pull in setup items.
+
+RUN mkdir -p /home/ox_user/ox_server/logs
+
 WORKDIR /home/ox_user/ox_server
 RUN git clone https://github.com/aocks/ox_herd
 
 RUN pip3 install -r ./ox_herd/requirements.txt
-
-
-# Setup home directory and pull in setup items.
-RUN mkdir -p /home/ox_user/ox_server/logs
 
 
 ADD ./scripts/server_start.sh /ox_server/
