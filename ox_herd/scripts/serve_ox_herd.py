@@ -4,6 +4,7 @@ This is the main script to run ox_herd and provide a python Flask
 based web server to respond to web requests.
 """
 
+import configparser
 import argparse
 import logging
 import os
@@ -49,24 +50,37 @@ def run():
 def _do_setup(args):
     "Should be called by run() to do basic setup based on args."
 
-    if args.host == '0.0.0.0':
+    if args.debug and args.host == '0.0.0.0':
         logging.warning('Setting host to 127.0.0.1 since in debug mode')
         args.host = '127.0.0.1'
 
     logging.getLogger('').setLevel(args.logging)
     logging.info('Set log level to %s', args.logging)
-    plug_set = set(args.plugins)
-    if len(plug_set) < len(args.plugins):
-        raise ValueError('Duplicates in args.plugins = %s' % args.plugins)
+    plugin_list = args.plugin if args.plugin else []
+    plug_set = set(plugin_list)
+    if len(plug_set) < len(plugin_list):
+        raise ValueError('Duplicates in args.plugin = %s' % plugin_list)
     cur_plugs = set(ox_herd_settings.OX_PLUGINS)
 
-    for item in args.plugins:
+    for item in plugin_list:
         if item not in cur_plugs:
             logging.info('Adding plugin %s to OX_PLUGINS.', item)
             ox_herd_settings.OX_PLUGINS.append(item)
         else:
             logging.info(
                 'Not adding plugin %s to OX_PLUGINS since already there.', item)
+
+def _setup_stub_login(app):
+    conf_file = ox_herd_settings.OX_HERD_CONF
+    if os.path.exists(conf_file):
+        from ox_herd.core import login_stub
+        app.register_blueprint(login_stub.LOGIN_STUB_BP)
+        my_config = configparser.ConfigParser()
+        my_config.read(conf_file)
+        if 'STUB_USER_DB' in my_config:
+            for user, hash_password in my_config.items('STUB_USER_DB'):
+                ox_herd_settings.STUB_USER_DB[user] = hash_password
+
 
 def _serve(args):
     "Run the server. Should only be called by run after doing setup."
@@ -81,7 +95,7 @@ def _serve(args):
     app = Flask('ox_herd')
 
     settings = {'SECRET_KEY' : os.urandom(128),
-                'USERNAME' : 'admin', 'DEBUG' : True}
+                'USERNAME' : 'admin', 'DEBUG' : args.debug}
 
     app.config.from_object(__name__)
     app.config.update(settings)
@@ -89,10 +103,10 @@ def _serve(args):
     from ox_herd.ui.flask_web_ui import ox_herd
     from ox_herd.ui.flask_web_ui.ox_herd import views
     app.register_blueprint(ox_herd.OX_HERD_BP, url_prefix='/ox_herd')
+    _setup_stub_login(app)
 
-    if settings['DEBUG']:
-        from ox_herd.core import login_stub
-        app.register_blueprint(login_stub.LOGIN_STUB_BP)
+    assert bool(settings['DEBUG']) == bool(args.debug), (
+        'Inconsistent debug values from settings and args.')
 
     @app.route("/")
     def redirect_to_ox_herd():
