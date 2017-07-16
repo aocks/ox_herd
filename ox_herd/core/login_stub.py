@@ -37,7 +37,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        password_hash = settings.STUB_USER_DB.get('username', 'disabled')
+        password_hash = settings.STUB_USER_DB.get(username, 'disabled')
         if password_hash != 'disabled' and pwd_context.verify(
                 password, password_hash):
             user = User(username)
