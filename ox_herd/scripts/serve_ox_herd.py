@@ -80,6 +80,12 @@ def _setup_stub_login(app):
         if 'STUB_USER_DB' in my_config:
             for user, hash_password in my_config.items('STUB_USER_DB'):
                 ox_herd_settings.STUB_USER_DB[user] = hash_password
+        else:
+            logging.warning('Unable to find STUB_USER_DB in conf %s',
+                            conf_file)
+    else:
+        logging.warning('Unable to find OX_HERD_CONF at %s',
+                        ox_herd_settings.OX_HERD_CONF)
 
 
 def _serve(args):
