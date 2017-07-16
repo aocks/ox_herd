@@ -6,16 +6,10 @@
   <div>
     <TABLE cellpadding="10">
       <TH>Test report</TH>
-      <TH>Failed</TH>
-      <TH>Passed</TH>
-      <TH>Duration</TH>
-      <TH>Created at</TH>
+      <TH>Summary</TH>
       <TR>
 	<TD>{{ task_data.task_name }}</TD>
-	<TD>{{ task_data.json_data['summary']['failed'] }}</TD> 
-	<TD>{{ task_data.json_data['summary']['passed'] }}</TD> 
-	<TD>{{ task_data.json_data['summary']['duration'] }}</TD> 
-	<TD>{{ task_data.json_data['created_at'] }}</TD> 
+	<TD>{{ task_data.json_data['summary'] }}</TD> 
       </TR>
     </TABLE>
   </div>
