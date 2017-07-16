@@ -11,63 +11,45 @@
   </summary>
   {% set failure_num = 0 %}	
   {% for item in test_list %}
-  {% if item.error or item.failure%}
-  {# ------------------------------------------------------------ #}
-  {# Start processing errors and failures.                        #}
-  {# ------------------------------------------------------------ #}
-  {# For this to look right on github, need no spaces before tags #}
+  {% set problem_info = item.error or item.failure %}
+       {% if problem_info %}
+       {# ------------------------------------------------------------ #}
+       {# For this to look right on github, need no spaces before tags #}
 <!-- *IMPORTANT*: to look right on github, need no spaces before tags -->
-<details class="w3-red">{% set failure_num = failure_num + 1 %}
+<details class="w3-red">
+       {% set failure_num = failure_num + 1 %}
 <summary>{{('%i'%failure_num).zfill(3)}} -- {{ item['@name'] }}</summary>
 <br>
-{% if item['error'] %}
-{# --------------- #}
-{# test item has an error but might be one or multiple #}
-{# --------------- #}
-{% if item['error']['#text'] %}
-{# test item had a single error so show it #}
+       {# --------------- #}
+       {# test item has an error but might be one or multiple #}
+       {# --------------- #}
+           {% if problem_info['#text'] %}
+           {# test item had a single error so show it #}
 <PRE>
-{{ item['error']['#text'] }}
+{{ problem_info['#text'] }}
 </PRE>
 <br>
-{% else %}
-{# --------------- #}
-{# test item has multiple errors so loop through them #}
-{# --------------- #}
-Multiple errors:
+           {% else %}
+           {# --------------- #}
+           {# test item has multiple problems so loop through them #}
+           {# --------------- #}
+Multiple problems:
 <br>
-{% set problem_num = 0 %}	
-{% for problem in (item['error']) %}
-{% set problem_num = problem_num + 1 %}
-{% include 'py_test_sub_failure.html' %}
-{% endfor %}
-{% endif %}
-{% elif item['failure']['#text'] %}
-{# --------------- #}
-{# test has no errors (so it was loaded and run) but may have failures #}
-{# --------------- #}
-<PRE>
-{{ item['failure']['#text'] }}
-</PRE>
-{% else %}
-{# --------------- #}
-{# Now we have no idea what happend so just show raw output #}
-{# --------------- #}
-Could not understand tester output:
-<PRE>
-{{ item }}
-</PRE>
-<br>
-{% endif %}
+           {% set problem_num = 0 %}	
+           {% for problem in problem_info %}
+               {% set problem_num = problem_num + 1 %}
+               {% include 'py_test_sub_failure.html' %}
+           {% endfor %}
+           {% endif %}
 </details>
-  {# ------------------------------------------------------------ #}
-  {# Finish processing errors and failures.                       #}
-  {# ------------------------------------------------------------ #}
-{% else %}
-  {# ------------------------------------------------------------ #}
-  {# Non-error and non-failure processed here
-  {# ------------------------------------------------------------ #}
+      {# ------------------------------------------------------------ #}
+      {# Finish processing errors and failures.                       #}
+      {# ------------------------------------------------------------ #}
+      {% else %}
+      {# ------------------------------------------------------------ #}
+      {# Non-error and non-failure processed here
+      {# ------------------------------------------------------------ #}
 <!-- Not showing info for non-problem {{ item['@name'] }} -->
-{% endif %}
-{% endfor %}
+      {% endif %}
+  {% endfor %}
 </details>
