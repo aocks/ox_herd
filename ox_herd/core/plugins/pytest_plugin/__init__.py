@@ -24,6 +24,17 @@ def pytest():
             'Content-Type', request.headers['Content-Type']))
                          
     event = request.headers['X-Github-Event']
+    if event == 'push':
+        try:
+            warn_task = RunPyTest.make_push_warn_task(request)
+            warn_job = OxScheduler.launch_raw_task(warn_task)
+            msg = 'Launched warn_task %s as job %s' % (warn_task, warn_job)
+            logging.debug(msg)
+            return msg
+        except Exception as prob:
+            logging.error('Unable to make warn push task because %s', prob)
+            raise
+    
     if event != 'pull_request':
         # Only process pull_request.
         logging.debug('skipping github event %s', event)
@@ -42,7 +53,6 @@ def pytest():
     logging.debug(msg)
 
     return msg
-
 
 def get_ox_plugin():
     """Required function for module to provide plugin.
