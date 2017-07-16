@@ -329,6 +329,26 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
 
     @classmethod
     def make_push_warn_task(cls, request, warnables=('refs/heads/master',)):
+        """Helper to make a task to warn about direct pushes to master.
+        
+        :arg request:    The web request from a github webhook.
+        
+        :arg warnables=('refs/heads/master',):  Tuple of strings to warn about.
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        :returns:  An instance of the PostToGitHub class that when run
+                   will post a message to github warning about pushing
+                   directly to master.
+        
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+        
+        PURPOSE:   Support continuous integration via pull requests by
+                   creating a task that will warn about direct pushes to
+                   master. This is intended to be called by the pytest
+                   route if a push event is seen.
+        
+        """
         payload = json.loads(request.data.decode('utf8'))
         gh_info = {'head': {'repo': payload['repository']},
                    'title' : 'push_warning', 'number': None}
