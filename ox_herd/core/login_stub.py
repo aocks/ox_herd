@@ -8,6 +8,9 @@ If you import this module via something like
 you will enable a simple stub login.
 """
 
+import passlib
+from passlib.apps import custom_app_context as pwd_context
+
 from flask import (Response, redirect, url_for, request,
                    Blueprint, flash, get_flashed_messages, escape)
 from flask.ext.login import (
@@ -35,8 +38,8 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username in settings.STUB_USER_DB and (
-                password == settings.STUB_USER_DB.get(username, None)):
+        if username in settings.STUB_USER_DB and (pwd_context.verify(
+                password, settings.STUB_USER_DB[username])):
             user = User(username)
             login_user(user)
             next_url = request.args.get("next", '')
