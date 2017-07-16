@@ -7,4 +7,7 @@ su - -c "rq worker" ox_user 2>&1 | \
 su - -c rqscheduler ox_user 2>&1 | \
    rotatelogs /home/ox_user/ox_server/logs/rqscheduler.log 86400 &
 
+export PYTHONPATH=/home/ox_user/ox_server/ox_herd
+echo "PYTHONPATH is $PYTHONPATH"
+python3 /home/ox_user/ox_server/ox_herd/ox_herd/scripts/serve_ox_herd.py
 
