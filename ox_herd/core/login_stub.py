@@ -39,7 +39,7 @@ def login():
         username = request.form['username']
         password = request.form['password']
         password_hash = settings.STUB_USER_DB.get('username', 'disabled')
-        if username in settings.STUB_USER_DB and pwd_context.verify(
+        if password_hash != 'disabled' and pwd_context.verify(
                 password, password_hash):
             user = User(username)
             login_user(user)
@@ -48,7 +48,9 @@ def login():
                 url_for('ox_herd.index'))
             return redirect(next_url)
         else:
-            flash('Login failed; try again')
+            flash('Login failed to login as %s; try again' % username)
+            if password_hash == 'disabled':
+                flash('WARNING: username %s is disabled' % username)
             return redirect(url_for('login_stub.login'))
     else:
         messages = get_flashed_messages()
