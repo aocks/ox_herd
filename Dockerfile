@@ -46,7 +46,7 @@ RUN useradd -ms /bin/bash ox_user && \
   echo "github_token = $GITHUB_TOKEN" >> /home/ox_user/.ox_herd_conf && \
   echo "[STUB_USER_DB]" > /home/ox_user/.ox_herd_conf && \
   echo "$OX_WEB_USER = $OX_PASSWD_HASH" >> /home/ox_user/.ox_herd_conf && \
-  echo "# Include some profile setting items" >> /home/ox_user/.profile && \
+  echo "# Include some profile setting  items" >> /home/ox_user/.profile && \
   echo "export LC_ALL=C.UTF-8" >> /home/ox_user/.profile && \
   echo "export LANG=C.UTF-8" >> /home/ox_user/.profile && \
   echo "export PYTHONPATH=/home/ox_user/ox_server/ox_herd:/home/ox_user/ox_server/ox_herd/ox_herd" \
@@ -55,13 +55,14 @@ RUN useradd -ms /bin/bash ox_user && \
 
 # Setup log directory and pull in setup items.
 
-RUN mkdir -p /home/ox_user/ox_server/logs
-
 WORKDIR /home/ox_user/ox_server
-RUN git clone https://github.com/aocks/ox_herd
+
+# Next add the ox_herd directory we are running from
+COPY . ox_herd
 
 RUN pip3 install -r ./ox_herd/requirements.txt
 
+RUN mkdir -p /home/ox_user/ox_server/logs
 
 ADD ./scripts/server_start.sh /ox_server/
 
