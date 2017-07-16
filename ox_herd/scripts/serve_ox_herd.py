@@ -86,7 +86,6 @@ def _setup_stub_login(app):
     else:
         logging.warning('Unable to find OX_HERD_CONF at %s',
                         ox_herd_settings.OX_HERD_CONF)
-    logging.error('FIXME: STUB_USER_DB=%s', str(ox_herd_settings.STUB_USER_DB))
 
 
 def _serve(args):
