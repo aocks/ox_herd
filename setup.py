@@ -38,7 +38,7 @@ setup(
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests']), #FIXME
-    install_requires=[], #FIXME: need more here
+    install_requires=[pytest, pytest-xdist, xmltodict],
     # If there are data files included in your packages that need to be
     # installed, specify them here.
     package_data={
