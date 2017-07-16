@@ -1,4 +1,6 @@
 
+**WARNING**: still in alpha
+
 # Introduction
 
 The ox_herd package is a python system for job scheduling and management based on the [python-rq](http://python-rq.org) package.
