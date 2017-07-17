@@ -15,6 +15,8 @@ example for more details.
 import configparser
 import json
 
+from eyap.core import github_comments
+
 from ox_herd.core.plugins import base
 from ox_herd.core.ox_tasks import OxHerdTask
 
@@ -126,12 +128,6 @@ class PostToGitHub(OxHerdTask, base.OxPluginComponent):
             thread_id = None
 
         owner, repo = full_repo.split('/')
-
-        # FIXME: We need to handle the dependeancy on flask_yap more
-        # FIXME: gracefully. Maybe make flask_yap installable via pip?
-        # FIXME: For now, just import it here so if people are not using
-        # FIXME: this feature it will not break.
-        from flask_yap.core import github_comments
 
         comment_thread = github_comments.GitHubCommentThread(
             owner, repo, topic, user, token, thread_id=thread_id)
