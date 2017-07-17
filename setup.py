@@ -14,7 +14,7 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
@@ -38,7 +38,7 @@ setup(
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests']), #FIXME
-    install_requires=[pytest, pytest-xdist, xmltodict],
+    install_requires=['pytest', 'pytest-xdist', 'xmltodict'],
     # If there are data files included in your packages that need to be
     # installed, specify them here.
     package_data={
