@@ -4,7 +4,7 @@ Flask-WTF==0.13.1
 parsedatetime==2.1
 psutil==5.2.2
 pylint==1.7.1
-pytest==3.0.3
+pytest==2.8.6
 pytest-json==0.4.0
 pytest-xdist==1.15.0
 python-dateutil==2.5.3
