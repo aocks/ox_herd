@@ -110,7 +110,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         payload = json.loads(request.data.decode('utf8'))
         my_pr = payload['pull_request']
         my_conf, dummy_my_sec = cls._get_config_info(my_pr)
-        cls._validate_request(request, my_conf['secret'])
+        cls._validate_request(request, my_conf['github_secret'])
         sha = my_pr['head']['sha']
         name = 'github_pr_pytest_%s_%s' % (sha[:10], my_pr['updated_at'])
         task = RunPyTest(
@@ -359,7 +359,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         
         full_repo = payload['repository']['full_name']
         title = 'warning_push'
-        cls._validate_request(request, my_conf['secret'])
+        cls._validate_request(request, my_conf['github_secret'])
         msg = 'Warning: %s pushed to %s on %s' % (
             payload['sender']['login'], payload['ref'], full_repo)
             
