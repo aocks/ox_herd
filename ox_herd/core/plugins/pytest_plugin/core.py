@@ -114,7 +114,8 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         sha = my_pr['head']['sha']
         name = 'github_pr_pytest_%s_%s' % (sha[:10], my_pr['updated_at'])
         task = RunPyTest(
-            name=name, url=payload['repository']['ssh_url'], 
+            name=name, url=payload['repository']['html_url'].replace(
+                'https://', 'https://' + my_conf['github_token']),
             pytest_cmd='--doctest-modules',
             github_info=my_pr)
 
