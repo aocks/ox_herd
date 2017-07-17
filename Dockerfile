@@ -47,7 +47,7 @@ RUN useradd -ms /bin/bash ox_user && \
   echo "github_user = $GITHUB_USER" >> /home/ox_user/.ox_herd_conf && \
   echo "github_token = $GITHUB_TOKEN" >> /home/ox_user/.ox_herd_conf && \
   echo "github_secret = $GITHUB_SECRET" >> /home/ox_user/.ox_herd_conf && \
-  echo "[STUB_USER_DB]" > /home/ox_user/.ox_herd_conf && \
+  echo "[STUB_USER_DB]" >> /home/ox_user/.ox_herd_conf && \
   echo "$OX_WEB_USER = $OX_PASSWD_HASH" >> /home/ox_user/.ox_herd_conf && \
   echo "# Include some profile setting  items" >> /home/ox_user/.profile && \
   echo "export LC_ALL=C.UTF-8" >> /home/ox_user/.profile && \
