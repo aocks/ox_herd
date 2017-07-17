@@ -9,8 +9,10 @@ ENV DEBIAN_FRONTEND noninteractive
 # User *MUST* provide this for posting to github to work.
 ARG GITHUB_USER
 ARG GITHUB_TOKEN
+ARG GITHUB_SECRET
 RUN echo "checking if gave GITHUB_USER build arg" && test -n "$GITHUB_USER"
 RUN echo "checking if gave GITHUB_TOKEN build arg" && test -n "$GITHUB_TOKEN"
+RUN echo "checking if gave GITHUB_SECRET build arg" && test -n "$GITHUB_SECRET"
 
 # We need OX_WEB_USER and OX_PASSWD_HASH if you want to be able to login
 # to the server without manually providing a user/password database.
@@ -44,6 +46,7 @@ RUN useradd -ms /bin/bash ox_user && \
   echo "[pytest/DEFAULT]" > /home/ox_user/.ox_herd_conf && \
   echo "github_user = $GITHUB_USER" >> /home/ox_user/.ox_herd_conf && \
   echo "github_token = $GITHUB_TOKEN" >> /home/ox_user/.ox_herd_conf && \
+  echo "github_secret = $GITHUB_SECRET" >> /home/ox_user/.ox_herd_conf && \
   echo "[STUB_USER_DB]" > /home/ox_user/.ox_herd_conf && \
   echo "$OX_WEB_USER = $OX_PASSWD_HASH" >> /home/ox_user/.ox_herd_conf && \
   echo "# Include some profile setting  items" >> /home/ox_user/.profile && \
