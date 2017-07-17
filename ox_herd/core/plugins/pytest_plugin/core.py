@@ -114,8 +114,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         sha = my_pr['head']['sha']
         name = 'github_pr_pytest_%s_%s' % (sha[:10], my_pr['updated_at'])
         task = RunPyTest(
-            name=name, url=payload['repository']['html_url'].replace(
-                'https://', 'https://' + my_conf['github_token']),
+            name=name, url=payload['repository']['html_url'],
             pytest_cmd='--doctest-modules',
             github_info=my_pr)
 
@@ -153,12 +152,13 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
 
         return {'return_value' : rval, 'json_blob' : test_data}
 
-    @staticmethod
-    def do_test(py_test_args, test_file, my_tmp_dir):
+    @classmethod
+    def do_test(cls, py_test_args, test_file, my_tmp_dir):
         # Will force PYTHONPATH into my_env to ensure we test the
         # right thing
         my_env = os.environ.copy()
         pta = py_test_args.pytest_cmd
+        clone_path = None
         if isinstance(pta, str):
             pta = shlex.split(pta)
         pta.append('--boxed')
@@ -167,17 +167,27 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
             cmd_line = [url.path, '--junitxml', test_file, '-v'] + pta
             my_env['PYTHONPATH'] = url.path
         elif url.scheme == '' and url.path[:15] == 'git@github.com:':
+            clone_path = url.path
+        elif url.scheme == 'https':
+            my_conf, dummy_sec = cls._get_config_info(py_test_args.github_info)
+            if 'github_token' in my_conf:
+                clone_path = 'https://%s@%s%s' % (my_conf[
+                    'github_token'], url.netloc, url.path)
+            else:
+                clone_path = url.geturl()
+        else:
+            raise ValueError('URL scheme/path = "%s/%s" not handled yet.' % (
+                url.scheme, url.path))
+        if clone_path:
             # If you are using github, then we need gitpython so import it
             # here so non-github users do not need it
             from git import Repo
-            my_repo = Repo.clone_from(url.path, my_tmp_dir)
+            my_repo = Repo.clone_from(clone_path, my_tmp_dir)
             if py_test_args.github_info:
                 my_repo.git.checkout(py_test_args.github_info['head']['sha'])
             my_env['PYTHONPATH'] = os.path.join(my_tmp_dir)
             cmd_line = [my_tmp_dir, '--junitxml', test_file, '-v'] + pta
-        else:
-            raise ValueError('URL scheme/path = "%s/%s" not handled yet.' % (
-                url.scheme, url.path))
+
         logging.info('Running pytest on %s with command arguments of: %s',
                      my_tmp_dir, str(cmd_line))        
         subprocess.call(['py.test'] + cmd_line, env=my_env)
