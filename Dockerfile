@@ -19,6 +19,9 @@ RUN echo "checking if gave GITHUB_SECRET build arg" && test -n "$GITHUB_SECRET"
 ARG OX_WEB_USER=disabled
 ARG OX_PASSWD_HASH=disabled
 
+RUN echo "if OX_WEB_USER build arg empty server will not start" && test -n "$OX_WEB_USER"
+RUN echo "if OX_PASSWD_HASH build arg empty server will not start" && test -n "$OX_PASSWD_HASH"
+
 
 
 # Need to do an apt-get update early on or lots of things won't work.
@@ -76,7 +79,6 @@ RUN sed -i.bak 's/\r$//' /ox_server/server_start.sh
 RUN chmod ugo+rx /ox_server/server_start.sh
 
 RUN chown -R ox_user:www-data /home/ox_user
-
 
 WORKDIR /ox_server
 
