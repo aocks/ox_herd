@@ -6,7 +6,7 @@ The ox_herd package is a python system for job scheduling and management based o
 The main goal of ox_herd is to make it easy to schedule, inspect, and administrate automated jobs including:
 
   1. Running tests via [pytest](https://docs.pytest.org/en/latest/)
-     * For example, you can use ox_herd as a simple, lightweight, dockerized continous integration server 
+     * For example, you can use ox_herd as a simple, lightweight, [dockerized continuous integration server](https://github.com/aocks/ox_herd/blob/master/docs/ci.md).
   1. Running [pylint](https://www.pylint.org/) on your code.
   1. Running arbitrary python scripts.
 
