@@ -69,10 +69,15 @@ RUN mkdir -p /home/ox_user/ox_server/logs
 
 ADD ./scripts/server_start.sh /ox_server/
 
+# In case you are running docker on windows, need to make sure
+# you strip the \r out of the start script
+RUN sed -i.bak 's/\r$//' /ox_server/server_start.sh
+
 RUN chmod ugo+rx /ox_server/server_start.sh
 
 RUN chown -R ox_user:www-data /home/ox_user
 
 
 WORKDIR /ox_server
-CMD /ox_server/server_start.sh
+
+CMD ["bash", "/ox_server/server_start.sh"]
