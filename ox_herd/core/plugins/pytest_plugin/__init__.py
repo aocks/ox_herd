@@ -12,7 +12,8 @@ OH_BP = Blueprint('pytest_plugin', __name__, template_folder='templates')
 OxHerdPyTestPlugin.set_bp(OH_BP)
 
 
-@OH_BP.route('/ox_herd/pytest', defaults={'pull_url_type': 'html'})
+@OH_BP.route('/ox_herd/pytest', defaults={'pull_url_type': 'html'},
+             methods=['GET', 'POST'])
 @OH_BP.route('/ox_herd/pytest/<pull_url_type>', methods=['GET', 'POST'])
 def pytest(pull_url_type='html'):
     """Route for launching pytest directly.
