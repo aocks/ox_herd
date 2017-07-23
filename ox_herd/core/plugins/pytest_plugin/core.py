@@ -87,7 +87,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         self.github_info = github_info
 
     @classmethod
-    def make_task_from_request(cls, request):
+    def make_task_from_request(cls, request, pull_url_type='html'):
         """Make an instance of this task from a web request.
         
         :arg request:    Web request in json format (e.g., from GitHub webhook)
@@ -114,7 +114,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         sha = my_pr['head']['sha']
         name = 'github_pr_pytest_%s_%s' % (sha[:10], my_pr['updated_at'])
         task = RunPyTest(
-            name=name, url=payload['repository']['html_url'],
+            name=name, url=payload['repository']['%s_url' % pull_url_type],
             pytest_cmd='--doctest-modules',
             github_info=my_pr)
 
