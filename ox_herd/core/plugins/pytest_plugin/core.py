@@ -184,7 +184,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
             from git import Repo
             if py_test_args.github_info:
                 sha = py_test_args.github_info['head']['sha']
-                repo_name = py_test_args.github_info['repo']['name']
+                repo_name = py_test_args.github_info['repository']['name']
             else:
                 sha, repo_name = None, 'git.repo'
             my_repo = Repo.clone_from(clone_path, my_tmp_dir + '/' + repo_name)
