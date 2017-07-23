@@ -33,7 +33,7 @@ class OxHerdPyTestPlugin(base.OxPlugin):
     @classmethod
     def set_bp(cls, my_bp):
         cls.__blueprint = my_bp
-    
+
     def get_flask_blueprint(self):
         """Implement as required by OxPlugin."""
 
@@ -42,7 +42,7 @@ class OxHerdPyTestPlugin(base.OxPlugin):
     @classmethod
     def get_bp(cls):
         return cls.__blueprint
-    
+
 
     def name(self):
         """Implement as required by OxPlugin."""
@@ -59,16 +59,16 @@ class OxHerdPyTestPlugin(base.OxPlugin):
 
 class RunPyTest(OxHerdTask, base.OxPluginComponent):
 
-    def __init__(self, *args, url=None, pytest_cmd=None, xml_file=None, 
+    def __init__(self, *args, url=None, pytest_cmd=None, xml_file=None,
                  github_info=None, **kw):
         """Initializer.
-        
+
         :arg *args:    Argumnets to OxHerdTask.__init__.
 
-        :arg url:      URL representing where to run pytest on.  
-        
+        :arg url:      URL representing where to run pytest on.
+
         :arg pytest_cmd: String with command line arguments for running pytest.
-        
+
         :arg xml_file=None:   Optional path for where to store xml_file
                               with test results. Usually better to leave this
                               as None indicating to just use a temp file.
@@ -78,7 +78,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
                                github repo and issue to post comment to.
 
         :arg **kw:     Keyword arguments to OxHerdTask.__init__.
-        
+
         """
         OxHerdTask.__init__(self, *args, **kw)
         self.pytest_cmd = pytest_cmd
@@ -89,23 +89,23 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
     @classmethod
     def make_task_from_request(cls, request, pull_url_type='html'):
         """Make an instance of this task from a web request.
-        
+
         :arg request:    Web request in json format (e.g., from GitHub webhook)
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         :returns:       Instance of cls designed to execute a test based
                         on information from webhook.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:   Create instance of cls based on a hit to the ox_herd/pytest
                    endpoint (which must be of type application/json). This
                    does things like validate the HMAC from github, pull out
                    the payload from the request, and configure the task.
                    After that you can call launch_raw_task on the returned
                    value if you have an OxScheduler object.
-        
+
         """
         payload = json.loads(request.data.decode('utf8'))
         my_pr = payload['pull_request']
@@ -147,7 +147,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
                 os.remove(test_file) # remove temp file
 
             cls.post_results_to_github(ox_herd_task, test_data)
-            
+
         rval = test_data['summary']
 
         return {'return_value' : rval, 'json_blob' : test_data}
@@ -182,14 +182,20 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
             # If you are using github, then we need gitpython so import it
             # here so non-github users do not need it
             from git import Repo
-            my_repo = Repo.clone_from(clone_path, my_tmp_dir)
             if py_test_args.github_info:
+                sha = py_test_args.github_info['head']['sha']
+                repo_name = py_test_args.github_info['repo']['name']
+            else:
+                sha, repo_name = None, 'git.repo'
+            my_repo = Repo.clone_from(clone_path, my_tmp_dir + '/' + repo_name)
+            if sha is not None:
                 my_repo.git.checkout(py_test_args.github_info['head']['sha'])
-            my_env['PYTHONPATH'] = os.path.join(my_tmp_dir)
+            my_env['PYTHONPATH'] = '%s:%s' % (
+                os.path.join(my_tmp_dir + '/' + repo_name), my_tmp_dir)
             cmd_line = [my_tmp_dir, '--junitxml', test_file, '-v'] + pta
 
         logging.info('Running pytest on %s with command arguments of: %s',
-                     my_tmp_dir, str(cmd_line))        
+                     my_tmp_dir, str(cmd_line))
         subprocess.call(['py.test'] + cmd_line, env=my_env)
         return url, cmd_line
 
@@ -197,17 +203,17 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
     @classmethod
     def post_results_to_github(cls, ox_herd_task, test_data):
         """Helper method to post test results to github.
-        
+
         :arg ox_herd_task:   The Ox Herd task containing data.
-        
+
         :arg test_data:      A dictionary containing the result of running
                              tests as produced by make_report.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:  If he user has his .ox_herd_conf file setup to include
                   a [pytest/DEFAULT] section (or a section like
-                  [pytest/owner/repo]) with a github_user and 
+                  [pytest/owner/repo]) with a github_user and
                   github_token with access to the repo in
                   ox_herd_task.github_info, then we will try
                   to post the results of the test as a comment in
@@ -215,12 +221,12 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
 
                   This is a key feature in using this plugin for
                   continuous integration with github.
-        """        
+        """
         if not ox_herd_task.github_info:
             return
         grepo = ox_herd_task.github_info['head']['repo']['full_name']
         grepo = grepo.strip()
-        sha = ox_herd_task.github_info['head']['sha']        
+        sha = ox_herd_task.github_info['head']['sha']
         tmsg = 'Testing commit %s' % sha
         my_conf, dummy_sec = cls._get_config_info(ox_herd_task.github_info)
         msg = '%s\n\nTested %s:\n%s\n' % (tmsg, grepo, test_data['summary'])
@@ -234,7 +240,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
                             test_list=test_data['tests'])
 
         if 'github_issue' in my_conf:
-            title = my_conf['github_issue'] 
+            title = my_conf['github_issue']
             number = None
         else:
             title = ox_herd_task.github_info['title']
@@ -249,34 +255,34 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
     @classmethod
     def _get_config_info(cls, github_info):
         """Get configuration info from OX_HERD_CONF file based on github_info.
-        
+
         :arg github_info:    Dictionary with data about github repo or None
                              to use section pytest/DEFAULT
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         :returns:   A dictionary from configparser.ConfigParser pulled out of
                     OX_HERD_CONF file based on the repo in github.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:    Figure out which repo we are dealing with and extract
                     configuration from OX_HERD_CONF.
-        
+
         """
         config_file = cls.get_conf_file()
         my_config = configparser.ConfigParser()
         my_config.read(config_file)
         if github_info:
             owner, repo = github_info['head']['repo']['full_name'].split('/')
-            section = 'pytest/%s/%s' % (owner, repo) 
+            section = 'pytest/%s/%s' % (owner, repo)
         else:
             section = None
         if section is not None and section in my_config:
             my_sec = section
         else:
             my_sec = 'pytest/DEFAULT'
-        
+
         my_data = my_config[my_sec]
 
         return my_data, my_sec
@@ -291,15 +297,15 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
     @staticmethod
     def _validate_request(request, secret):
         """Validate github signature on request.
-        
+
         :arg request:   Web request of type application/json
-        
+
         :arg secret:    Secret used for HMAC.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:  Verify the HMAC or raise ValueError.
-        
+
         """
         header_signature = request.headers.get('X-Hub-Signature')
         if header_signature is None:
@@ -309,7 +315,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         sha_name, signature = header_signature.split('=')
         if sha_name != 'sha1':
             raise ValueError('Header signature "%s" not supported.' % sha_name)
-            
+
         request_data = request.data
         mac = hmac.new(bytes(secret, 'utf8'), request_data, digestmod='sha1')
         if not str(mac.hexdigest()) == str(signature):
@@ -340,24 +346,24 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
     @classmethod
     def make_push_warn_task(cls, request, warnables=('refs/heads/master',)):
         """Helper to make a task to warn about direct pushes to master.
-        
+
         :arg request:    The web request from a github webhook.
-        
+
         :arg warnables=('refs/heads/master',):  Tuple of strings to warn about.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         :returns:  An instance of the PostToGitHub class that when run
                    will post a message to github warning about pushing
                    directly to master.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:   Support continuous integration via pull requests by
                    creating a task that will warn about direct pushes to
                    master. This is intended to be called by the pytest
                    route if a push event is seen.
-        
+
         """
         payload = json.loads(request.data.decode('utf8'))
         gh_info = {'head': {'repo': payload['repository']},
@@ -367,13 +373,13 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
             logging.debug('Pushing to %s not %s so not warning on push',
                           payload['ref'], str(warnables))
             return None
-        
+
         full_repo = payload['repository']['full_name']
         title = 'warning_push'
         cls._validate_request(request, my_conf['github_secret'])
         msg = 'Warning: %s pushed to %s on %s' % (
             payload['sender']['login'], payload['ref'], full_repo)
-            
+
         task = post_to_github_plugin.PostToGitHub(
             msg, full_repo, title, None, cls.get_conf_file(), my_sec,
             name='github_posting')
