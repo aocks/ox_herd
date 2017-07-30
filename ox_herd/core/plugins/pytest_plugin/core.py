@@ -209,8 +209,8 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
             my_env['PYTHONPATH'] = ':'.join([my_env['PYTHONPATH']] + [
                 os.path.join(my_tmp_dir, name) for name in yconfig.pop(
                     'prepend_pypaths', [])])
-            for git_clone in yconfig.pop('git_clones', []):
-                Repo.clone_from(git_clone, my_tmp_dir)
+            for gname, gpath in yconfig.pop('git_clones', {}).items():
+                Repo.clone_from(gpath, os.path.join(my_tmp_dir, gname))
             if yconfig:
                 logging.warning('Unprocessed items in yaml file: %s', str(
                     yconfig))
