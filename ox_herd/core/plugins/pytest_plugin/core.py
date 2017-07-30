@@ -116,7 +116,7 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         name = 'github_pr_pytest_%s_%s' % (sha[:10], my_pr['updated_at'])
         task = RunPyTest(
             name=name, url=payload['repository']['%s_url' % pull_url_type],
-            pytest_cmd='--doctest-modules',
+            pytest_cmd='--doctest-modules', timeout=3000, 
             github_info=my_pr)
 
         return task
