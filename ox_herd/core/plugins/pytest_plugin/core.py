@@ -206,9 +206,9 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         yaml_file = os.path.join(new_repo, 'ox_herd_test.yaml')
         if os.path.exists(yaml_file):
             yconfig = yaml.safe_load(open(yaml_file).read())
-            my_env['PYTHONPATH'] = ':'.join([my_env['PYTHONPATH']] + [
+            my_env['PYTHONPATH'] = ':'.join([
                 os.path.join(my_tmp_dir, name) for name in yconfig.pop(
-                    'prepend_pypaths', [])])
+                    'prepend_pypaths', [])] + [my_env['PYTHONPATH']])
             for gname, gpath in yconfig.pop('git_clones', {}).items():
                 Repo.clone_from(gpath, os.path.join(my_tmp_dir, gname))
             if yconfig:
