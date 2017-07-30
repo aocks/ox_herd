@@ -197,7 +197,8 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
             sha = py_test_args.github_info['head']['sha']
             repo_name = py_test_args.github_info['head']['repo']['name']
         else:
-            sha, repo_name = None, 'git.repo'
+            sha, repo_name = None, os.path.split(
+                clone_path)[-1].split('.git')[0]
         my_repo = Repo.clone_from(clone_path, my_tmp_dir + '/' + repo_name)
         if sha is not None:
             my_repo.git.checkout(py_test_args.github_info['head']['sha'])
