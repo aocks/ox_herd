@@ -16,6 +16,7 @@ import hmac
 import jinja2
 
 import xmltodict
+import yaml
 
 
 from ox_herd import settings as ox_herd_settings
@@ -179,25 +180,40 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
             raise ValueError('URL scheme/path = "%s/%s" not handled yet.' % (
                 url.scheme, url.path))
         if clone_path:
-            # If you are using github, then we need gitpython so import it
-            # here so non-github users do not need it
-            from git import Repo
-            if py_test_args.github_info:
-                sha = py_test_args.github_info['head']['sha']
-                repo_name = py_test_args.github_info['head']['repo']['name']
-            else:
-                sha, repo_name = None, 'git.repo'
-            my_repo = Repo.clone_from(clone_path, my_tmp_dir + '/' + repo_name)
-            if sha is not None:
-                my_repo.git.checkout(py_test_args.github_info['head']['sha'])
-            my_env['PYTHONPATH'] = '%s:%s' % (
-                os.path.join(my_tmp_dir + '/' + repo_name), my_tmp_dir)
+            cls.prep_git_clone(py_test_args, clone_path, my_tmp_dir, my_env)
             cmd_line = [my_tmp_dir, '--junitxml', test_file, '-v'] + pta
 
         logging.info('Running pytest on %s with command arguments of: %s',
                      my_tmp_dir, str(cmd_line))
         subprocess.call(['py.test'] + cmd_line, env=my_env)
         return url, cmd_line
+
+    @classmethod
+    def prep_git_clone(cls, py_test_args, clone_path, my_tmp_dir, my_env):
+        # If you are using github, then we need gitpython so import it
+        # here so non-github users do not need it
+        from git import Repo
+        if py_test_args.github_info:
+            sha = py_test_args.github_info['head']['sha']
+            repo_name = py_test_args.github_info['head']['repo']['name']
+        else:
+            sha, repo_name = None, 'git.repo'
+        my_repo = Repo.clone_from(clone_path, my_tmp_dir + '/' + repo_name)
+        if sha is not None:
+            my_repo.git.checkout(py_test_args.github_info['head']['sha'])
+        new_repo = os.path.join(my_tmp_dir, repo_name)
+        my_env['PYTHONPATH'] = '%s:%s' % (new_repo, my_tmp_dir)
+        yaml_file = os.path.join(new_repo, 'ox_herd_test.yaml')
+        if os.path.exists(yaml_file):
+            yconfig = yaml.safe_load(open(yaml_file).read())
+            my_env['PYTHONPATH'] = ':'.join([my_env['PYTHONPATH']] + [
+                os.path.join(my_tmp_dir, name) for name in yconfig.pop(
+                    'prepend_pypaths', [])])
+            for git_clone in yconfig.pop('git_clones', []):
+                Repo.clone_from(git_clone, my_tmp_dir)
+            if yconfig:
+                logging.warning('Unprocessed items in yaml file: %s', str(
+                    yconfig))
 
 
     @classmethod
