@@ -382,8 +382,12 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
 
         """
         payload = json.loads(request.data.decode('utf8'))
+        cname = payload.get('head_commit', {}).get('committer', {}).get(
+            'name', {})
+        if cname == 'GitHub':  # This was a pull request merge so return None
+            return None
         gh_info = {'head': {'repo': payload['repository']},
-                   'title' : 'push_warning', 'number': None}
+                   'title': 'push_warning', 'number': None}
         my_conf, my_sec = cls._get_config_info(gh_info)
         if payload['ref'] not in warnables:
             logging.debug('Pushing to %s not %s so not warning on push',
