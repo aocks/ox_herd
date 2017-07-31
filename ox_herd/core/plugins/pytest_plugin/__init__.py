@@ -30,10 +30,11 @@ def pytest(pull_url_type='html'):
     if event == 'push':
         try:
             warn_task = RunPyTest.make_push_warn_task(request)
-            warn_job = OxScheduler.launch_raw_task(warn_task)
-            msg = 'Launched warn_task %s as job %s' % (warn_task, warn_job)
-            logging.debug(msg)
-            return msg
+            if warn_task is not None:
+                warn_job = OxScheduler.launch_raw_task(warn_task)
+                msg = 'Launched warn_task %s as job %s' % (warn_task, warn_job)
+                logging.debug(msg)
+                return msg
         except Exception as prob:
             logging.error('Unable to make warn push task because %s', prob)
             raise
