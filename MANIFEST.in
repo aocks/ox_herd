@@ -1,0 +1,2 @@
+recursive-include ox_herd/ui/flask_web_ui/ox_herd/templates *
+recursive-include ox_herd/ui/flask_web_ui/ox_herd/static *
