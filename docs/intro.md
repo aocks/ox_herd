@@ -24,6 +24,7 @@ See the full [documentation on github](https://github.com/aocks/ox_herd/blob/mas
 
 See the following for more detailed discussions:
 
+  1. [ox_herd_example](https://github.com/emin63/ox_herd_example): A github package with a simple demo illustrating what you can do with `ox_herd.`
   1. [ci.md](https://github.com/aocks/ox_herd/blob/master/docs/ci.md): How to use ox_herd as a dockerized continuous integration server.
   1. [plugins.md](https://github.com/aocks/ox_herd/blob/master/docs/plugins.md): A discussion on how to write your own ox_herd plugins.
 
