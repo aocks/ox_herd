@@ -16,5 +16,5 @@ Some other alternatives for python include Celery and python rq while more gener
 
 # Documentation
 
-See the full [documentation on github](https://github.com/aocks/ox_herd/blob/master/docs/intro.md) for further details. 
+See the full [documentation on github](https://github.com/aocks/ox_herd/blob/master/docs/intro.md) for further details or see the [ox_herd_example](https://github.com/emin63/ox_herd_example) package on github for a simple demo illustrating what you can do with `ox_herd.`
 
