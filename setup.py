@@ -26,7 +26,7 @@ def get_readme():
 
 setup(
     name='ox_herd',
-    version='0.2.1',
+    version='0.3.1',
     description='Tools for task automation, continous integration, and testing.',
     long_description=get_readme(),
     url='http://github.com/aocks/ox_herd',
@@ -43,7 +43,8 @@ setup(
     keywords='testing continuous integration', 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=['contrib', 'docs', 'tests']), #FIXME
+    packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+    include_package_data=True,
     install_requires=['pytest', 'pytest-xdist', 'xmltodict', 'eyap'],
     # If there are data files included in your packages that need to be
     # installed, specify them here.
