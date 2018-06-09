@@ -26,7 +26,7 @@ def get_readme():
 
 setup(
     name='ox_herd',
-    version='0.3.2',
+    version='0.4.2',
     description='Tools for task automation, continous integration, and testing.',
     long_description=get_readme(),
     url='http://github.com/aocks/ox_herd',
