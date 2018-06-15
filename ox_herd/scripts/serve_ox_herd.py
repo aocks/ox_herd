@@ -10,7 +10,7 @@ import logging
 import os
 
 from flask import Flask, redirect, url_for
-from flask.ext.login import LoginManager, UserMixin, login_required
+from flask_login import LoginManager, UserMixin, login_required
 
 from ox_herd import settings as ox_herd_settings
 
