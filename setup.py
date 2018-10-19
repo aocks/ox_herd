@@ -11,7 +11,7 @@ or write to emin.martinian@gmail.com for more information.
 from os import path
 
 from setuptools import setup, find_packages
-
+from ox_herd import VERSION
 
 def get_readme():
     'Get the long description from the README file'
@@ -26,7 +26,7 @@ def get_readme():
 
 setup(
     name='ox_herd',
-    version='0.4.3',
+    version=VERSION,
     description='Tools for task automation, continous integration, and testing.',
     long_description=get_readme(),
     url='http://github.com/aocks/ox_herd',
