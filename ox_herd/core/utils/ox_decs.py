@@ -5,13 +5,13 @@ documentation for the following for detailed information:
 
   - `fix_doc`
   - `withdoc`
-  - `compose`
+  - `composed`
 
 The `fix_doc` function can be used in your own decorators to make sure
 your decorator adds information to the original docstring about the
 decorator applied. For already existing decorators, you can use
 the `withdoc` function to make the existing decorator call `fix_doc` to
-update the docstring. Finally, you can use `compose` to combine
+update the docstring. Finally, you can use `composed` to combine
 multiple decorators in a way that correctly updates the docstring with
 information about the decorators whether or not they used `fix_doc`.
 
