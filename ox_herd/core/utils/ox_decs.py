@@ -1,9 +1,19 @@
 """Useful decorators and decorator tools.
 
-The `ox_decs` module contains useful decorators and related tools.
-One of the most useful is the `withdoc` decorator which can make
-sure decorated functions have their original documentation plus
-some documentation about how they were decorated.
+The `ox_decs` module contains useful decorators and related tools. See
+documentation for the following for detailed information:
+
+  - `fix_doc`
+  - `withdoc`
+  - `compose`
+
+The `fix_doc` function can be used in your own decorators to make sure
+your decorator adds information to the original docstring about the
+decorator applied. For already existing decorators, you can use
+the `withdoc` function to make the existing decorator call `fix_doc` to
+update the docstring. Finally, you can use `compose` to combine
+multiple decorators in a way that correctly updates the docstring with
+information about the decorators whether or not they used `fix_doc`.
 
 See docs for `withdoc` for more information.
 """
@@ -16,6 +26,9 @@ import functools
 
 def withdoc(decorator):
     """Decorator to apply a decorator and attach its docs to a function.
+
+    Basically, you can ust put `@withdoc` as a decorator calling your
+    original (unmodified) decorator to get preserved docs.
 
     The following illustrates example usage:
 
@@ -67,8 +80,37 @@ def fix_doc(func, decorator):
     ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
     PURPOSE:   Modify func.__doc__ to describe the decorator.
-               Intended to be used by `withdoc` function. See that
-               for more details.
+               You can use the `fix_doc` function to make sure your
+               decorator fixes docs of a decorated function when writing
+               your own decorators as illustrated below.
+
+   SEE ALSO:   See also the `withdoc` which can apply this to existing
+               decorators.
+
+>>> import ox_decs, functools
+>>> def withfun(func):  # Write a decorator to illustrate how to use fix_doc
+...     "Print how fun a function was after calling it."
+...     @functools.wraps(func)
+...     def decorated(*args, **kwargs):
+...         "Function with fun"
+...         result = func(*args, **kwargs)
+...         name = getattr(func, '__name__', '(unknown)')
+...         print('Calling %s was fun!' % name)
+...         return result
+...     ox_decs.fix_doc(decorated, withfun)
+...     return decorated
+...
+>>> @withfun
+... def add(x, y):
+...     "Add x and y together."
+...     return x + y
+...
+>>> print(add.__doc__)
+Add x and y together.
+-------
+Wrapped by decorator withfun:
+Print how fun a function was after calling it.
+
     """
     if not func.__doc__:
         func.__doc__ = 'Function %s' % func.__name__
@@ -81,7 +123,7 @@ def fix_doc(func, decorator):
 
 
 def withlog(func, logfunc=logging.info):
-    "Decorate function to log output after calling."
+    "Decorate function to log output and illustrate using fix_doc."
 
     @functools.wraps(func)
     def decorated(*args, **kwargs):
@@ -90,6 +132,9 @@ def withlog(func, logfunc=logging.info):
         name = getattr(func, '__name__', '(unknown)')
         logfunc('Calling %s gives:\n%s\n', name, result)
         return result
+    # To make sure that our decorated function updates docstrings of the
+    # decorated function, we call fix_doc below. Note that fix_doc references
+    # name of the decorator itself.
     fix_doc(decorated, withlog)
 
     return decorated
@@ -136,7 +181,7 @@ Wrapped by decorator withtime:
 Decorate function to show run time after calling.
 -------
 Wrapped by decorator withlog:
-Decorate function to log output after calling.
+Decorate function to log output and illustrate using fix_doc.
 -------
 Wrapped by decorator withprint:
 withprint decorates a function to print result after running it.
