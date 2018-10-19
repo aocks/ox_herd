@@ -120,6 +120,7 @@ Print how fun a function was after calling it.
         extra += ':\n%s' % decorator.__doc__
     func.__wrapdoc__ = extra
     func.__doc__ += extra
+    return func
 
 
 def withlog(func, logfunc=logging.info):
