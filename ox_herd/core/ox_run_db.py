@@ -12,6 +12,7 @@ import redis
 
 from ox_herd import settings as ox_settings
 
+
 def create(run_db=None):
     "Create and return RunDB reference based on run_db input."
 
@@ -22,6 +23,7 @@ def create(run_db=None):
         return SqliteRunDB(run_db[1])
 
     raise ValueError('Could not understand run_db %s' % str(run_db))
+
 
 class RunDB(object):
     """Abstract specification for database to track running of tasks.
@@ -39,7 +41,7 @@ class RunDB(object):
 
         :returns:   Task id to use in referring to task later (e.g, in
                     record_task_finish method). This is backend dependeant
-                    and may be an integer or string or something else 
+                    and may be an integer or string or something else
                     depending on what is easiest for the backend.
 
         PURPOSE:    Record that we started something.
@@ -57,13 +59,13 @@ class RunDB(object):
 
         :arg status='finished':   String status of task.
 
-        :arg json_blob=None:  Optional string representing json encoding of 
+        :arg json_blob=None:  Optional string representing json encoding of
                               task output. Using JSON to store the result
                               for later inspection is more portable.
 
         :arg pickle_blob=None:  Optional string representing python pickle
-                                encoding of task output. Using JSON to store 
-                                the result for later inspection is more 
+                                encoding of task output. Using JSON to store
+                                the result for later inspection is more
                                 portable, but you can use pickle if necessary.
 
         """
@@ -71,35 +73,34 @@ class RunDB(object):
 
     def delete_task(self, task_id):
         """Delete the task from the database.
-        
+
         :arg task_id:        ID for task as returned by record_task_start.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:   Delete the task.
-        
+
         """
         raise NotImplementedError
 
-
     def get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
-        
+
         :arg status='finished':   Status of tasks to search. Should be one
                                   of entries from get_allowed_status().
-        
-        :arg start_utc=None: String specifying minimum task_start_utc.       
-        
-        :arg end_utc=None:   String specifying maximum task_end_utc     
-        
+
+        :arg start_utc=None: String specifying minimum task_start_utc.
+
+        :arg end_utc=None:   String specifying maximum task_end_utc
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         :returns:       List of TaskInfo objects.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:        Main way to get information about the tasks run.
-        
+
         """
         raise NotImplementedError
 
@@ -112,14 +113,15 @@ class RunDB(object):
         """
         return ['started', 'finished']
 
+
 class TaskInfo(object):
     """Python class to represent task info stored in database.
     """
 
     def __init__(
-            self, task_id, task_name, task_start_utc, task_status,
-            task_end_utc=None, return_value=None, json_data=None, 
-            pickle_data=None, template=None):
+            self, task_id, task_name, task_start_utc=None,
+            task_status=None, task_end_utc=None, return_value=None,
+            json_data=None, pickle_data=None, template=None):
         self.task_id = task_id
         self.task_name = task_name
         self.task_start_utc = task_start_utc
@@ -149,7 +151,6 @@ class TaskInfo(object):
         """
         return json.dumps(self.to_dict())
 
-            
 
 class RedisRunDB(RunDB):
     """Implementation of RunDB with redis backend.
@@ -187,10 +188,11 @@ class RedisRunDB(RunDB):
         task_id = '%s_%s' % (task_name, datetime.datetime.utcnow().timestamp())
         task_key = self.task_master + task_id
         if self.conn.get(task_key):
-            raise ValueError('Cannot add task %s as %s since already exists' % (
-                str(task_name), task_id))
+            raise ValueError(
+                'Cannot add task %s as %s since already exists' % (
+                    str(task_name), task_id))
         info = TaskInfo(
-            task_id, task_name, str(datetime.datetime.utcnow()), 
+            task_id, task_name, str(datetime.datetime.utcnow()),
             'started', template=template).to_json()
         add_result = self.conn.set(task_key, info)
         assert add_result, 'Got add_result = %s for %s; race condition?' % (
@@ -218,7 +220,7 @@ class RedisRunDB(RunDB):
         task_info = self.get_task_info(task_id)
         if task_info:
             return TaskInfo(**task_info)
-        
+
         return None
 
     def record_task_finish(self, task_id, return_value, status='finished',
@@ -229,7 +231,7 @@ class RedisRunDB(RunDB):
         if not task_info:
             logging.error('Unable to update existing task with finish stats')
             logging.error('Will create finished but unstarted task')
-            task_info = {'task_name' : 'unknown', 'task_status' : 'unknown'}
+            task_info = {'task_name': 'unknown', 'task_status': 'unknown'}
 
         if task_info['task_status'] == 'finished':
             raise ValueError('Cannot record_task_finish for %s; already ended.'
@@ -244,22 +246,22 @@ class RedisRunDB(RunDB):
 
     def get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
-        
+
         :arg status='finished':   Status of tasks to search. Should be one
                                   entries from get_allowed_status().
-        
-        :arg start_utc=None: String specifying minimum task_start_utc.       
-        
-        :arg end_utc=None:   String specifying maximum task_end_utc     
-        
+
+        :arg start_utc=None: String specifying minimum task_start_utc.
+
+        :arg end_utc=None:   String specifying maximum task_end_utc
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         :returns:       List of TaskInfo objects.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:        Main way to get information about the tasks run.
-        
+
         """
         result = []
         for key in self.conn.scan_iter(match=self.task_master + '*'):
@@ -369,13 +371,12 @@ class SqliteRunDB(RunDB):
         sql = '''DELETE FROM task_info WHERE task_id = ?'''
         self.conn.execute(sql, task_id)
 
-
     def record_task_finish(self, task_id, return_value, status='finished',
                            json_blob=None, pickle_blob=None):
         'Implement record_task_finish for this backend.'
 
         sql = '''UPDATE task_info
-        SET task_end_utc=?, return_value=?, task_status=?, 
+        SET task_end_utc=?, return_value=?, task_status=?,
             json_blob=?, pickle_blob=?
         WHERE task_id=?'''
         cursor = self.conn.cursor()
@@ -391,33 +392,33 @@ class SqliteRunDB(RunDB):
             logging.error('Unable to update existing task with finish stats')
             logging.error('Will create finished but unstarted task')
             sql = '''INSERT INTO task_info (
-              task_name, task_start_utc, 
+              task_name, task_start_utc,
               task_id, task_end_utc, return_value, task_status
               json_blob=?, pickle_blob=?) VALUES (
               'unknown', 'unknown', ?, ?, ?, ?)'''
-            cursor.execute(sql, [json_blob, pickle_blob, task_id, 
+            cursor.execute(sql, [json_blob, pickle_blob, task_id,
                                  utcnow, return_value, status])
 
         self.conn.commit()
 
     def get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
-        
+
         :arg status='finished':   Status of tasks to search. Should be one
                                   entries from get_allowed_status().
-        
-        :arg start_utc=None: String specifying minimum task_start_utc.       
-        
-        :arg end_utc=None:   String specifying maximum task_end_utc     
-        
+
+        :arg start_utc=None: String specifying minimum task_start_utc.
+
+        :arg end_utc=None:   String specifying maximum task_end_utc
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         :returns:       List of TaskInfo objects.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         PURPOSE:        Main way to get information about the tasks run.
-        
+
         """
         cursor = self.conn.cursor()
         sql = ['select * from task_info where task_status like ?']
@@ -428,7 +429,7 @@ class SqliteRunDB(RunDB):
         if end_utc is not None:
             sql.append(' AND (task_end_utc IS NULL OR task_end_utc >= ?)')
             args.append(str(end_utc))
-                       
+
         cursor.execute('\n'.join(sql), args)
 
         return [TaskInfo(*item) for item in cursor.fetchall()]
