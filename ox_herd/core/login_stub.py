@@ -12,8 +12,8 @@ from passlib.apps import custom_app_context as pwd_context
 
 from flask import (Response, redirect, url_for, request,
                    Blueprint, flash, get_flashed_messages, escape)
-from flask_login import (
-    LoginManager, UserMixin, login_user, logout_user, login_required)
+from flask_login.login_manager import LoginManager
+from flask_login import (UserMixin, login_user, logout_user, login_required)
 
 from ox_herd import settings
 
