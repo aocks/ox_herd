@@ -52,3 +52,26 @@ You can view or interact with the ox_herd server directly provided you setup som
      - `docker exec -it ox_server /bin/bash` to get a shell on the docker image running the server
      - Get your hashed password using the python one liner shown previously.
      - Do `nano /home/ox_user/.ox_herd_conf` to edit the conf file and add a line like `<user> = <hashed_password>` in the `[STUB_USER_DB]` section.
+
+# Configuration files
+
+Instead of using environment variables, you can also put many of the
+above parameters into your `~/.ox_herd_conf` for the user running the
+ox_herd server.
+
+```
+[pytest/DEFAULT]
+github_user = <username>
+github_token = <token>
+github_secret = <secret>
+
+[STUB_USER_DB]
+
+# Below you can put <username> = <hashed_password> for allowed
+# ox_herd users. You can generate the hashed password via the following
+# from a python3 session:
+#
+#    from passlib.apps import custom_app_context
+#    print( custom_app_context.encrypt("<YOUR_PASSWORD>"))
+tester = FIXME_put_hash_password_here
+```
