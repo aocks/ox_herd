@@ -199,7 +199,10 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         else:
             sha, repo_name = None, os.path.split(
                 clone_path)[-1].split('.git')[0]
+
+        logging.warning('Preparing to clone %s', clone_path)
         my_repo = Repo.clone_from(clone_path, my_tmp_dir + '/' + repo_name)
+        logging.info('Finished cloning %s', clone_path)
         if sha is not None:
             my_repo.git.checkout(py_test_args.github_info['head']['sha'])
         new_repo = os.path.join(my_tmp_dir, repo_name)
@@ -346,8 +349,11 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
         test_data['cmd_line'] = cmd_line
         test_data['task_name'] = my_task.name
         summary_fields = ['errors', 'failures', 'skips', 'tests', 'time']
+        fields = test_data['testsuite']
+        logging.info('Test fields are %s', ', '.join(map(str, fields)))
         test_data['summary'] = 'Test resultls: ' + ', '.join([
-            '%s: %s' % (name, test_data['testsuite']['@' + name])
+            '%s: %s' % (name, test_data['testsuite'].get(
+                '@' + name, 'None'))
             for name in summary_fields])
         test_data['tests'] = test_data['testsuite']['testcase']
 
