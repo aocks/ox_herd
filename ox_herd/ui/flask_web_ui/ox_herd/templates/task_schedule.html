@@ -30,13 +30,12 @@
       </UL>
     </details>
     {% endfor %}
-    </UL>
-  </details>
+</details>
 </div>
 
     
 {% for qname in queue_names %}
-<div class="w3-light-grey w3-margin-bottom w3-panel">
+<div class="w3-light-grey w3-margin-bottom w3-panel content">
   <details open>
     <summary style="font-size:200%;">
       Scheduled Jobs for queue "{{ qname }}":
@@ -55,17 +54,15 @@
     <summary style="font-size:200%;">
       Ignored jobs:
     </summary>
-  {% for item in task_schedule %}
-  {% set oh_task = item.kwargs['ox_herd_task'] %}
-  {% if oh_task.queue_name not in queue_names %}
-  {% include 'task_info.html' %}
-  {% endif %}
-  {% endfor %}
+    {% for item in task_schedule %}
+    {% set oh_task = item.kwargs['ox_herd_task'] %}
+    {% if oh_task.queue_name not in queue_names %}
+    {% include 'task_info.html' %}
+    {% endif %}
+    {% endfor %}
   </details>
 </div>
 
-
-</div>
 {% endfor %}
 
 <div class="w3-light-grey w3-margin-bottom w3-panel">
