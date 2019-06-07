@@ -11,6 +11,7 @@ module.
 import shlex
 import copy
 import logging
+import json
 
 from ox_herd import settings as ox_settings
 from ox_herd.core import ox_run_db
@@ -209,9 +210,13 @@ class OxHerdTask(object):
             rval['return_value'] = call_result
         elif isinstance(call_result, dict):
             rval = dict(call_result)
+        elif hasattr(call_result, 'to_dict'):
+            as_dict = call_result.to_dict()
+            rval = {'return_value': as_dict.pop('return_value')}
+            rval['json_blob'] = json.dumps(as_dict)
         else:
             raise TypeError(
-                'call_result from main_call must be str or dict not %s' % (
+                'call_result from main_call not str/dict/to_dict; got %s' % (
                     str(call_result)))
                 
         rdb.record_task_finish(ox_herd_task.rdb_job_id, status=status, **rval)
