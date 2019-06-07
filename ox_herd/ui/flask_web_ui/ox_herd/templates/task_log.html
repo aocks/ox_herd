@@ -1,13 +1,13 @@
 {% extends "ox_layout.html" %}
 {% block body %}
 
-<div class="w3-light-grey w3-margin-bottom">
+<div class="w3-light-grey w3-margin-bottom content">
   <p>Minimum task_start_utc = {{ start_utc }}</p>
   <p>Maximum task_end_utc = {{ end_utc }}</p>
 </div>
 
 {% for my_status, task_list in task_dict.items() %}
-<div class="w3-light-grey w3-margin-bottom w3-row-padding">
+<div class="w3-light-grey w3-margin-bottom w3-row-padding content">
   <details open>
     <summary style="font-size:200%;">
       Tasks with status {{ my_status }} ({{task_list|count}} tasks)
