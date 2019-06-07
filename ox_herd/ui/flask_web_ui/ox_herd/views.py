@@ -259,3 +259,8 @@ def delete_task_from_db():
             'Delete task with id %s from database.' % task_id))
     return render_template('generic_display.html', commentary=(
         'Found no task_id so cannot do anything.'))
+
+def message():
+    "Show message that imported views."
+
+    logging.info('Imported ox_herd views for flask.')
