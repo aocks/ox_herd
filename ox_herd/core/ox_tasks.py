@@ -6,7 +6,7 @@ OxHerdTask for details.
 
 You can find some example sub-classes of OxHerdTask in the simple_ox_tasks.py
 module.
-"""
+1;5202;0c"""
 
 import shlex
 import copy
@@ -239,3 +239,4 @@ class OxHerdTask(object):
             cls.post_call(ox_herd_task, rdb, str(problem), 'exception')
             raise
         cls.post_call(ox_herd_task, rdb, result)
+        return result
