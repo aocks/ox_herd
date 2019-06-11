@@ -262,7 +262,7 @@ class OxHerdTask:
                   generics argument as well as looking for fields from
                   self.get_flask_form() if that is defiend and returns
                   something useful.
-                 
+
                   Sub-classes could override if desired.
         """
         result, found = [], {}
@@ -276,3 +276,5 @@ class OxHerdTask:
             if field not in found and hasattr(self, field):
                 found[field] = True
                 result.append((name, getattr(self, field)))
+
+        return result
