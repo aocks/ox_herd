@@ -6,7 +6,7 @@ OxHerdTask for details.
 
 You can find some example sub-classes of OxHerdTask in the simple_ox_tasks.py
 module.
-"""
+1;5202;0c"""
 
 import shlex
 import copy
@@ -237,6 +237,8 @@ class OxHerdTask:
             raise
         cls.post_call(ox_herd_task, rdb, result)
 
+        return result
+
     def get_display_fields(self, generics=(
             ('CRON string', 'cron_string'), ('timeout', 'timeout'),
             ('URL', 'url'), ('pytest args', 'pytest_cmd'))):
@@ -274,5 +276,3 @@ class OxHerdTask:
             if field not in found and hasattr(self, field):
                 found[field] = True
                 result.append((name, getattr(self, field)))
-
-        return result
