@@ -19,20 +19,11 @@
 	{% endif %}
   </TR></TABLE>
   <UL>
-    {% if oh_task.url %}    
-    <LI>URL : <A HREF="{{oh_task.url}}"> {{oh_task.url}}</A></LI>
-    {% endif %}
-    {% if oh_task.cron_string %}    
-    <LI> Cron string : {{oh_task.cron_string}}</LI>
-    {% endif %}
-    {% if oh_task.pytest %}
-    <LI> pytest args : 
-      <PRE>{{ oh_task.pytest_cmd }}</PRE>
-    </LI>
-    {% endif %}
-    {% if oh_task.timeout %}
-    <LI> timeout : {{ oh_task.timeout }} </LI>
-    {% endif %}
     <LI> job id : {{item.id}} </LI>
+    {% for name, value in oh_task.get_display_fields() %}
+    <LI>
+      {{name}} : {{value}}
+    </LI>
+    {% endfor %}
   </UL>
 </details>

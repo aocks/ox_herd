@@ -16,13 +16,14 @@ import json
 from ox_herd import settings as ox_settings
 from ox_herd.core import ox_run_db
 
-class OxHerdTask(object):
+
+class OxHerdTask:
     """Generic task class for ox_herd.
 
     Users should sub-class OxHerdTask and implement the main_call method.
 
     Due to the way python rq is setup, it's painful to try and pass class
-    instances. Instead, it's better to have your task class have only 
+    instances. Instead, it's better to have your task class have only
     class methods and pass the data in the kwargs part of a python rq job.
     This lets you more easily inspect the data that a task will be running on.
     To faciliate this, the OxHerdTask is setup to use only classmethods
@@ -43,7 +44,7 @@ class OxHerdTask(object):
     # Fields that affect how we pass job into python rq
     rq_fields = ['func', 'queue_name', 'timeout', 'cron_string']
 
-    def __init__(self, name, func=None, run_db=None, queue_name=None, 
+    def __init__(self, name, func=None, run_db=None, queue_name=None,
                  timeout=None, cron_string=None):
         """Initializer.
 
@@ -53,8 +54,8 @@ class OxHerdTask(object):
                          run_ox_task classmethod of a sub-class of the
                          OxHerdTask and that is what we use if func is None.
                          The instance of OxHerdTask will be passed
-                         as a keyword arg to func with key 'ox_herd_task', so 
-                         make sure func can be called as 
+                         as a keyword arg to func with key 'ox_herd_task', so
+                         make sure func can be called as
                          func(ox_herd_task=task).
 
         :arg run_db=None:    Database used to track execution of the task. If
@@ -77,23 +78,23 @@ class OxHerdTask(object):
             ox_settings.QUEUE_NAMES)[0]
         self.timeout = timeout
         self.cron_string = cron_string
-        self.rdb_job_id = None # job_id inside our own RunDB
+        self.rdb_job_id = None  # job_id inside our own RunDB
 
     @staticmethod
     def make_copy(ox_herd_task, name_suffix='_copy'):
         """Helper function to make a copy of the task.
-        
+
         :arg ox_herd_task:        Instance of OxHerdTask to copy.
-        
-        :arg name_suffix='_copy': Optional suffix to append to name.       
-        
+
+        :arg name_suffix='_copy': Optional suffix to append to name.
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
+
         :returns:       Copied task.
-        
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
-        
-        PURPOSE:    We sometimes want to make copies of a task (e.g., 
+
+        PURPOSE:    We sometimes want to make copies of a task (e.g.,
                     if the user wants to launch a copy of a scheduled task).
                     This method makes a copy but with a different name. It
                     also allows sub-classes to control how copies are made.
@@ -101,7 +102,6 @@ class OxHerdTask(object):
         args = copy.deepcopy(ox_herd_task)
         args.name += name_suffix
         return args
-
 
     @staticmethod
     def choose_default_run_db():
@@ -115,12 +115,10 @@ class OxHerdTask(object):
         if run_db[0] == 'sqlite':
             if run_db[1]:
                 return run_db
-            else:
-                raise ValueError('Need to provide valid path for sqlite run_db')
+            raise ValueError('Need to provide valid path for sqlite run_db')
 
         raise ValueError('Could not understand run_db setting: %s'
                          % str(run_db))
-
 
     @staticmethod
     def get_template_name():
@@ -135,14 +133,13 @@ class OxHerdTask(object):
         The task will be passed in as as task_data.
         """
         return 'generic_ox_task_result.html'
-        
-        
+
     @classmethod
     def main_call(cls, ox_herd_task):
         """Main function to run the task.
 
         Sub-classes should override to do something useful.
-        
+
         The return value should either be a simple string of 80 characters
         or less describing the result or a dict.
 
@@ -218,7 +215,7 @@ class OxHerdTask(object):
             raise TypeError(
                 'call_result from main_call not str/dict/to_dict; got %s' % (
                     str(call_result)))
-                
+
         rdb.record_task_finish(ox_herd_task.rdb_job_id, status=status, **rval)
 
     @classmethod
@@ -239,4 +236,43 @@ class OxHerdTask(object):
             cls.post_call(ox_herd_task, rdb, str(problem), 'exception')
             raise
         cls.post_call(ox_herd_task, rdb, result)
+
         return result
+
+    def get_display_fields(self, generics=(
+            ('CRON string', 'cron_string'), ('timeout', 'timeout'),
+            ('URL', 'url'), ('pytest args', 'pytest_cmd'))):
+        """Get fields to display for task.
+
+        :param generics: List of pairs of the form (TITLE, FIELD) where
+                         TITLE is a string name and FIELD is a string
+                         naming the property in self. We try to get the
+                         values for these fields.
+
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+
+        :return:  List of pairs of the form (TITLE, VALUE) where TITLE
+                  is the title for the field and VALUE is the value for
+                  the field.
+
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+
+        PURPOSE:  Get fields to display in showing task configuration. By
+                  default we look for various generic fields as in the
+                  generics argument as well as looking for fields from
+                  self.get_flask_form() if that is defiend and returns
+                  something useful.
+                 
+                  Sub-classes could override if desired.
+        """
+        result, found = [], {}
+        generics = list(generics)
+        my_form_cls_maker = getattr(self, 'get_flask_form', None)
+        if my_form_cls_maker:
+            my_form_cls = my_form_cls_maker()  # pylint: disable=not-callable
+            my_form = my_form_cls()
+            generics.extend([(f, f) for f, _ in my_form.data.items()])
+        for name, field in generics:
+            if field not in found and hasattr(self, field):
+                found[field] = True
+                result.append((name, getattr(self, field)))
