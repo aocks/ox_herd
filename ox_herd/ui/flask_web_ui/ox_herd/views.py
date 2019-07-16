@@ -11,7 +11,8 @@ import markdown
 from flask import render_template, redirect, request, Markup, url_for
 from flask_login import login_required
 
-from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP, helpers
+from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
+from ox_herd.core import health
 from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db
 from ox_herd import settings
 from ox_herd.core.plugins import manager as plugin_manager
@@ -25,11 +26,6 @@ def delete_old_data(old_data):
     for old_time, old_file in old_data:
         logging.debug('Deleting old file %s.', old_file)
         os.remove(old_file)
-
-
-# Create global RQDoc so that you can later set the value of
-# OX_RQ_DOC.complain to your own complaining function.
-OX_RQ_DOC = helpers.RQDoc()
 
 
 @OX_HERD_BP.route('/')
@@ -278,7 +274,8 @@ them (e.g., by doing sentry.capture or your own custom stuff).
     """
     probe_time = request.args.get('probe_time', '900').strip()
     check_queues = request.args.get('check_queues', 'default').strip()
-    result = OX_RQ_DOC.check(probe_time, check_queues)
+    doc = health.RQDoc()
+    result = doc.check(probe_time, check_queues)
     return result
 
 

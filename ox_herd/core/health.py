@@ -1,4 +1,4 @@
-"""Helper functions for views.
+"""Tools to check and verify health.
 
 """
 
@@ -23,6 +23,8 @@ some things to verify liveness. See docs on that as well
 as _regr_test method for details.
     """
 
+    default_complain = ValueError
+
     def __init__(self, complain=None):
         """Initializer.
 
@@ -31,8 +33,14 @@ as _regr_test method for details.
                                in probing a queue and complains. See
                                ProbeQueue class for details. This is used
                                as default when we call self.launch_probe.
+
+                               If you provide None, then we use the value
+                               of the class variable default_complain. This
+                               lets you change the default_complain to affect
+                               global default behaviour.
         """
-        self.complain = complain if complain else ValueError
+        self.complain = (
+            complain if complain else self.__class__.default_complain)
 
     def check(self, probe_time: int,
               check_queues: typing.Union[str, typing.Sequence[str]],
@@ -159,11 +167,11 @@ First setup basic boiler-plate imports
 >>> import random, time
 >>> from redis import Redis
 >>> from rq import SimpleWorker, Queue
->>> from ox_herd.ui.flask_web_ui.ox_herd import helpers
+>>> from ox_herd.core import health
 
 Next setup the RQDoc to check health along with queues and workers.
 
->>> doc = helpers.RQDoc()
+>>> doc = health.RQDoc()
 >>> qname = 'test_q_%i' % random.randint(0, 100000)
 >>> queue = Queue(connection=Redis(), name=qname)
 >>> worker = SimpleWorker([queue], connection=queue.connection)
