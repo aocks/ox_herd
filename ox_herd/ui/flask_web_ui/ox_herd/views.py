@@ -11,7 +11,7 @@ import markdown
 from flask import render_template, redirect, request, Markup, url_for
 from flask_login import login_required
 
-from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
+from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP, helpers
 from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db
 from ox_herd import settings
 from ox_herd.core.plugins import manager as plugin_manager
@@ -25,6 +25,12 @@ def delete_old_data(old_data):
     for old_time, old_file in old_data:
         logging.debug('Deleting old file %s.', old_file)
         os.remove(old_file)
+
+
+# Create global RQDoc so that you can later set the value of
+# OX_RQ_DOC.complain to your own complaining function.
+OX_RQ_DOC = helpers.RQDoc()
+
 
 @OX_HERD_BP.route('/')
 @OX_HERD_BP.route('/index')
@@ -58,7 +64,7 @@ def list_tasks():
 @login_required
 def show_task_log():
     "Show log of tasks run."
-    
+
     run_db = ox_run_db.create()
     start_utc=request.args.get('start_utc', None)
     end_utc=request.args.get('end_utc', None)
@@ -72,7 +78,7 @@ def show_task_log():
         else:
             other.append(item)
     task_dict['other'] = other
-    
+
     return render_template(
         'task_log.html', title='Task log', start_utc=start_utc,
         end_utc=end_utc, task_dict=task_dict)
@@ -137,7 +143,7 @@ def launch_job():
         new_jid = new_job.id
     else:
         new_jid = None
-    
+
     return render_template('launch_job.html', jid=new_jid)
 
 @OX_HERD_BP.route('/cancel_job')
@@ -214,7 +220,7 @@ def use_plugin():
         return render_template(
             template, form=my_form, intro=intro, title=(
                 'Form for component %s of plugin %s' % (plugcomp, plugname)))
-            
+
 
 @OX_HERD_BP.route('/schedule_job', methods=['GET', 'POST'])
 @login_required
@@ -259,6 +265,22 @@ def delete_task_from_db():
             'Delete task with id %s from database.' % task_id))
     return render_template('generic_display.html', commentary=(
         'Found no task_id so cannot do anything.'))
+
+
+@OX_HERD_BP.route('/health_check')
+@login_required
+def health_check():
+    """Check if system and rq worker and scheduler are healthy.
+
+You can set the value of OX_RQ_DOC.complain at runtime to be a function
+which takes a string describing problems with th worker queues and reports
+them (e.g., by doing sentry.capture or your own custom stuff).
+    """
+    probe_time = request.args.get('probe_time', '900').strip()
+    check_queues = request.args.get('check_queues', 'default').strip()
+    result = OX_RQ_DOC.check(probe_time, check_queues)
+    return result
+
 
 def message():
     "Show message that imported views."
