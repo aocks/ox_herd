@@ -25,20 +25,20 @@ class RunPyTest(OxHerdTask):
 
     def __init__(self, *args, url=None, pytest_cmd=None, json_file=None, **kw):
         """Initializer.
-        
+
         :arg *args:    Argumnets to OxHerdTask.__init__.
 
-        :arg url:      URL representing where to run pytest on.  
-        
+        :arg url:      URL representing where to run pytest on.
+
         :arg pytest_cmd: String with command line arguments for running pytest.
-        
+
         :arg json_file=None:   Optional path for where to store json_file
                                with test results. Usually better to leave this
                                as None indicating to just use a temp file.
                                Sometimes can be useful for testing.
-        
+
         :arg **kw:     Keyword arguments to OxHerdTask.__init__.
-        
+
         """
         OxHerdTask.__init__(self, *args, **kw)
         self.pytest_cmd = pytest_cmd
@@ -94,22 +94,22 @@ class RunPyTest(OxHerdTask):
 
 class ScanSite(OxHerdTask):
 
-    def __init__(self, *args, url=None, regexp='.', encoding='utf-8', 
+    def __init__(self, *args, url=None, regexp='.', encoding='utf-8',
                  show_len=60, **kw):
         """Initializer.
-        
+
         :arg *args:      Argumnets to OxHerdTask.__init__.
 
         :arg url:        URL representing where to run.
-        
+
         :arg regexp='.': String regular expression to scan for.
 
         :arg encoding='utf-8':  Expected encoding of URL data.
 
         :arg show_len=60:  Maxium length of regexp hit to show in return val.
-        
+
         :arg **kw:       Keyword arguments to OxHerdTask.__init__.
-        
+
         """
         OxHerdTask.__init__(self, *args, **kw)
         self.url = url
@@ -127,7 +127,7 @@ class ScanSite(OxHerdTask):
             if match:
                 result = clean[match.start():match.end()]
                 msg = 'Task %s found a match (first %i chars shown):\n%s' % (
-                    ox_herd_task.name, ox_herd_task.show_len, 
+                    ox_herd_task.name, ox_herd_task.show_len,
                     result[:ox_herd_task.show_len])
                 #ox_herd_task.send_message(msg)#FIXME
                 return msg
@@ -152,7 +152,10 @@ Using random_key = ...
 >>> task = simple_ox_tasks.ScanSite(
 ...     'test_scan', url='http://google.com', regexp='[Gg]oogle')
 >>> logging.info('Simulate what ox_herd would do in running the task:')
->>> task.run_ox_task(task)
+>>> result = task.run_ox_task(task)
+>>> print(result) # doctest: +ELLIPSIS
+Task test_scan found a match (first 60 chars shown):
+Google
 >>> my_redis = ox_run_db.redis.StrictRedis()
 >>> keys = my_redis.keys(ox_run_db.ox_settings.REDIS_PREFIX+'*')
 >>> len(keys)
