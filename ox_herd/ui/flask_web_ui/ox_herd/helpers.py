@@ -36,7 +36,7 @@ as _regr_test method for details.
 
     def check(self, probe_time: int,
               check_queues: typing.Union[str, typing.Sequence[str]],
-              complain: callable = None):
+              complain: callable = None) -> str:
         """Check liveness.
 
         :param probe_time:  Integer indicating how long to wait (in seconds)
@@ -48,6 +48,10 @@ as _regr_test method for details.
                               check for liveness.
 
         :param complain=None:  Passed to self.launch_probe.
+
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+
+        :return:  'OK' if things look OK.
 
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
@@ -64,6 +68,7 @@ as _regr_test method for details.
                 raise ValueError('Cannot have negative probe_time')
             for qname in self.queue_name_list(check_queues):
                 self.launch_probe(probe_time, qname, sdict, complain)
+        return 'OK'
 
     @staticmethod
     def queue_name_list(str_or_seq: typing.Union[str, typing.Sequence[str]]):
