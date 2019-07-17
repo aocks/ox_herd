@@ -33,7 +33,6 @@ def withdoc(decorator):
     The following illustrates example usage:
 
 >>> import functools
->>> from ox_decs import withdoc
 >>> def withprint(func):
 ...     "withprint decorates a function to print result after running it."
 ...     @functools.wraps(func)
@@ -87,7 +86,7 @@ def fix_doc(func, decorator):
    SEE ALSO:   See also the `withdoc` which can apply this to existing
                decorators.
 
->>> import ox_decs, functools
+>>> import functools
 >>> def withfun(func):  # Write a decorator to illustrate how to use fix_doc
 ...     "Print how fun a function was after calling it."
 ...     @functools.wraps(func)
@@ -97,7 +96,7 @@ def fix_doc(func, decorator):
 ...         name = getattr(func, '__name__', '(unknown)')
 ...         print('Calling %s was fun!' % name)
 ...         return result
-...     ox_decs.fix_doc(decorated, withfun)
+...     fix_doc(decorated, withfun)
 ...     return decorated
 ...
 >>> @withfun
@@ -160,7 +159,6 @@ def composed(*decs):
     """Decorator to compose other decorators together.
 
 >>> import functools
->>> from ox_decs import withdoc, composed, withlog, withtime
 >>> def withprint(func):
 ...     "withprint decorates a function to print result after running it."
 ...     @functools.wraps(func)
