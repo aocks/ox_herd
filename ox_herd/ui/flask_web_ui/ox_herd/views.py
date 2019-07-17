@@ -8,7 +8,7 @@ import collections
 
 import markdown
 
-from flask import render_template, redirect, request, Markup, url_for
+from flask import render_template, redirect, request, Markup, url_for, abort
 from flask_login import login_required
 
 from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
@@ -264,7 +264,6 @@ def delete_task_from_db():
 
 
 @OX_HERD_BP.route('/health_check')
-@login_required
 def health_check():
     """Check if system and rq worker and scheduler are healthy.
 
@@ -272,6 +271,12 @@ You can set the value of OX_RQ_DOC.complain at runtime to be a function
 which takes a string describing problems with th worker queues and reports
 them (e.g., by doing sentry.capture or your own custom stuff).
     """
+    token = request.args.get('token', '')
+    if token not in settings.HEALTH_CHECK_TOKENS:
+        logging.warning('Invalid token "%s" for health check; abort', token)
+        abort(403)
+    logging.info('Valid token for "%s" for health_check received',
+                 settings.HEALTH_CHECK_TOKENS[token])
     probe_time = request.args.get('probe_time', '900').strip()
     check_queues = request.args.get('check_queues', 'default').strip()
     doc = health.RQDoc()

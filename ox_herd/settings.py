@@ -2,6 +2,7 @@
 """
 
 import os
+import random
 
 # Path to your ox herd configuration file.
 OX_HERD_CONF = os.environ.get('OX_HERD_CONF', os.path.join(
@@ -39,6 +40,15 @@ RUN_DB = ('redis', None)
 
 # Prefix to use in things we store on redis queue for ox_herd.
 REDIS_PREFIX = 'ox_herd:'
+
+# The /health_check route must get a token in the following dict
+# to allow access. By default, the token value is random so nobody
+# will be able to have access. You must put in your own token
+# for things to work.
+# Format is HEALTH_CHECK_TOKENS[<token>] = <comment>
+HEALTH_CHECK_TOKENS = {
+    str(random.randint(0, 1e20)): 'default'
+    }
 
 # List of names of plugins to enable. Each "name" is a string which
 # can be used in a python import statement. By default we enable the
