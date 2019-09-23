@@ -26,7 +26,7 @@ as _regr_test method for details.
 
     default_complain = ValueError
 
-    def __init__(self, complain=None, q_mode: str = 's'):
+    def __init__(self, complain=None, q_mode: str = 'q'):
         """Initializer.
 
         :param complain=None:  Optional callable which takes a single
