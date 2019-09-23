@@ -271,17 +271,22 @@ You can set the value of OX_RQ_DOC.complain at runtime to be a function
 which takes a string describing problems with th worker queues and reports
 them (e.g., by doing sentry.capture or your own custom stuff).
     """
-    token = request.args.get('token', '')
-    if token not in settings.HEALTH_CHECK_TOKENS:
-        logging.warning('Invalid token "%s" for health check; abort', token)
-        abort(403)
-    logging.info('Valid token for "%s" for health_check received',
-                 settings.HEALTH_CHECK_TOKENS[token])
-    probe_time = request.args.get('probe_time', '900').strip()
-    check_queues = request.args.get('check_queues', 'default').strip()
-    doc = health.RQDoc()
-    result = doc.check(probe_time, check_queues)
-    return result
+    try:  # Use try block so return 500 if see an exception
+        token = request.args.get('token', '')
+        if token not in settings.HEALTH_CHECK_TOKENS:
+            logging.warning('Invalid token "%s" for health check; abort',
+                            token)
+            abort(403)
+        logging.info('Valid token for "%s" for health_check received',
+                     settings.HEALTH_CHECK_TOKENS[token])
+        probe_time = request.args.get('probe_time', '900').strip()
+        check_queues = request.args.get('check_queues', 'default').strip()
+        doc = health.RQDoc()
+        result = doc.check(probe_time, check_queues)
+        return result
+    except Exception as problem:  # pylint: disable=broad-except
+        logging.error('Problem in health_check: %s', str(problem))
+        abort(500)
 
 
 def message():
