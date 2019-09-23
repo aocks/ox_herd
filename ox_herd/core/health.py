@@ -307,7 +307,7 @@ the q_mode == 's'>
         elif self.q_mode == 's':
             sched = Scheduler(queue_name=self.qname, connection=Redis())
             launcher = sched.cron
-            kwargs = {'kwargs': kwargs, 'cron_string' = '* * * * *',
+            kwargs = {'kwargs': kwargs, 'cron_string': '* * * * *',
                       func=args.pop}
         else:
             raise ValueError('Invalid q_mode: "%s"' % self.q_mode)
