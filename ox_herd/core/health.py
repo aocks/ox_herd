@@ -333,6 +333,8 @@ the q_mode == 's'>
         if status != 'finished':
             msg = 'At UTC=%s, job %s launched at %s has status %s' % (
                 datetime.datetime.utcnow(), job, start, status)
+            msg += ('\n*IMPORTANT*:  this could indicate that either the\n'
+                    'rq worker or rqscheduler process is *DOWN*')
             self.sdict['status'] = 'bad'
             self.issue_complaint(msg)
         self.sdict['status'] = 'good'
