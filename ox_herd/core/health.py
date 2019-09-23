@@ -12,6 +12,7 @@ import typing
 
 from redis import Redis
 from rq import Queue, Worker
+from rq_scheduler import Scheduler
 
 
 class RQDoc:
@@ -25,7 +26,7 @@ as _regr_test method for details.
 
     default_complain = ValueError
 
-    def __init__(self, complain=None):
+    def __init__(self, complain=None, q_mode: str = 's'):
         """Initializer.
 
         :param complain=None:  Optional callable which takes a single
@@ -38,9 +39,17 @@ as _regr_test method for details.
                                of the class variable default_complain. This
                                lets you change the default_complain to affect
                                global default behaviour.
+
+        :param q_mode='s':     How to enqueue the job when checking queues:
+                                 - 's':  Use scheduler to enqueue so that
+                                         both queue and scheduler are checked.
+                                 - 'q':  Use queue directly so scheduler
+                                         not checked.
+
         """
         self.complain = (
             complain if complain else self.__class__.default_complain)
+        self.q_mode = q_mode
 
     def check(self, probe_time: int,
               check_queues: typing.Union[str, typing.Sequence[str]],
@@ -154,7 +163,8 @@ as _regr_test method for details.
 
         """
         probe = ProbeQueue(probe_time, qname, sdict,
-                           complain if complain else self.complain)
+                           complain if complain else self.complain,
+                           q_mode=self.q_mode)
         probe.daemon = True
         probe.start()
 
@@ -171,7 +181,7 @@ First setup basic boiler-plate imports
 
 Next setup the RQDoc to check health along with queues and workers.
 
->>> doc = health.RQDoc()
+>>> doc = health.RQDoc(q_mode='q')  # just check mode 'q' for simplicity
 >>> qname = 'test_q_%i' % random.randint(0, 100000)
 >>> queue = Queue(connection=Redis(), name=qname)
 >>> worker = SimpleWorker([queue], connection=queue.connection)
@@ -245,7 +255,7 @@ via the `complain` argument passed to __init__.
     """
 
     def __init__(self, probe_time: int, qname: str, sdict: dict,
-                 complain: callable, *args, **kwargs):
+                 complain: callable, q_mode: str, *args, **kwargs):
         """Initializer.
 
         :param probe_time: Integer probe time > 0.
@@ -267,22 +277,47 @@ via the `complain` argument passed to __init__.
                                not be seen by main thread. Hence you can
                                provide a custom complainer.
 
+        :param q_mode='s':     How to enqueue the job when checking queues:
+                                 - 's':  Use scheduler to enqueue so that
+                                         both queue and scheduler are checked.
+                                 - 'q':  Use queue directly so scheduler
+                                         not checked.
+
         :param *args, **kwargs:   Passed to Thread.__init__.
         """
         self.probe_time = probe_time
         self.qname = qname
         self.sdict = sdict
         self.complain = complain
+        self.q_mode = q_mode
         super().__init__(*args, **kwargs)
+
+    def queue_job(self):
+        """Enqueue a job based on self.q_mode and return queued job.
+
+This will enqueue directly if q_mode == 'q' and use a scheduler if
+the q_mode == 's'>
+        """
+        args = [return_true]
+        kwargs = {'ttl': 10*self.probe_time,
+                  'result_ttl': 20*self.probe_time}
+        if self.q_mode == 'q':
+            my_queue = Queue(self.qname, connection=Redis())
+            launcher = my_queue.enqueue
+        elif self.q_mode == 's':
+            sched = Scheduler(queue_name=self.qname, connection=Redis())
+            launcher = sched.enqueue_in
+            args.insert(0, datetime.timedelta(seconds=1))
+        else:
+            raise ValueError('Invalid q_mode: "%s"' % self.q_mode)
+        job = launcher(*args, **kwargs)
+        return job
 
     def run(self):
         """Run the thread.
         """
         start = datetime.datetime.utcnow()
-        my_queue = Queue(self.qname, connection=Redis())
-        job = my_queue.enqueue(return_true,
-                               ttl=10*self.probe_time,
-                               result_ttl=20*self.probe_time)
+        job = self.queue_job()
         for keep_trying in [1, 1, 1, 1, 1, 0]:  # try 5 times
             time.sleep(self.probe_time + 1)
             now = datetime.datetime.utcnow()
