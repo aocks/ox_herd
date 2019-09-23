@@ -319,7 +319,8 @@ the q_mode == 's'>
         start = datetime.datetime.utcnow()
         job = self.queue_job()
         for keep_trying in [1, 1, 1, 1, 1, 0]:  # try 5 times
-            logging.info('Sleeping to wait for %s', job)
+            logging.info('Sleeping %s to wait for %s',
+                         (self.probe_time + 1), job)
             time.sleep(self.probe_time + 1)
             now = datetime.datetime.utcnow()
             if (now - start).total_seconds() > self.probe_time:
