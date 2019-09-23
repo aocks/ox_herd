@@ -299,14 +299,15 @@ This will enqueue directly if q_mode == 'q' and use a scheduler if
 the q_mode == 's'>
         """
         args = [return_true]
-        kwargs = {'ttl': 10*self.probe_time,
-                  'result_ttl': 20*self.probe_time}
+        kwargs = {}
         if self.q_mode == 'q':
             my_queue = Queue(self.qname, connection=Redis())
             launcher = my_queue.enqueue
         elif self.q_mode == 's':
             sched = Scheduler(queue_name=self.qname, connection=Redis())
             launcher = sched.enqueue_in
+            # be careful as enqueue_in does not accept normal args/kwargs
+            # like ttl and result_ttol
             args.insert(0, datetime.timedelta(seconds=1))
         else:
             raise ValueError('Invalid q_mode: "%s"' % self.q_mode)
@@ -319,6 +320,8 @@ the q_mode == 's'>
         start = datetime.datetime.utcnow()
         job = self.queue_job()
         for keep_trying in [1, 1, 1, 1, 1, 0]:  # try 5 times
+            logging.info('Sleeping %s to wait for %s',
+                         (self.probe_time + 1), job)
             time.sleep(self.probe_time + 1)
             now = datetime.datetime.utcnow()
             if (now - start).total_seconds() > self.probe_time:
@@ -331,6 +334,8 @@ the q_mode == 's'>
         if status != 'finished':
             msg = 'At UTC=%s, job %s launched at %s has status %s' % (
                 datetime.datetime.utcnow(), job, start, status)
+            msg += ('\n*IMPORTANT*:  this could indicate that either the\n'
+                    'rq worker or rqscheduler process is *DOWN*')
             self.sdict['status'] = 'bad'
             self.issue_complaint(msg)
         self.sdict['status'] = 'good'
