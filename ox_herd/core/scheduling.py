@@ -6,7 +6,7 @@ import logging
 try: # try to import rq_scheduler and redis but allow other modes if fail
     import rq
     from rq.job import Job, UnpickleError
-    from rq import get_failed_queue, Queue
+    from rq import Queue
     import rq_scheduler
     from redis import Redis
 except Exception as problem:
@@ -46,14 +46,16 @@ class OxScheduler(object):
 
     @staticmethod
     def cleanup_job(job_id):
+        return #FIXME
         conn = Redis()
-        failed_queue = get_failed_queue(conn)
+        failed_queue = 'FIXME' #get_failed_queue(conn)
         failed_queue.remove(job_id)
         return 'Removed job %s' % str(job_id)
 
 
     @staticmethod
     def requeue_job(job_id):
+        return #FIXME
         conn = Redis()
         failed_queue = get_failed_queue(conn)
         result = failed_queue.requeue(job_id)
@@ -118,6 +120,7 @@ class OxScheduler(object):
     @staticmethod
     def get_failed_jobs():
         results = []
+        return #FIXME
         conn = Redis()
         failed = get_failed_queue(conn)
         failed_jobs = failed.jobs
