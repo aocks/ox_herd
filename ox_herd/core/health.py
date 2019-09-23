@@ -299,14 +299,15 @@ This will enqueue directly if q_mode == 'q' and use a scheduler if
 the q_mode == 's'>
         """
         args = [return_true]
-        kwargs = {'ttl': 10*self.probe_time,
-                  'result_ttl': 20*self.probe_time}
+        kwargs = {}
         if self.q_mode == 'q':
             my_queue = Queue(self.qname, connection=Redis())
             launcher = my_queue.enqueue
         elif self.q_mode == 's':
             sched = Scheduler(queue_name=self.qname, connection=Redis())
             launcher = sched.enqueue_in
+            # be careful as enqueue_in does not accept normal args/kwargs
+            # like ttl and result_ttol
             args.insert(0, datetime.timedelta(seconds=1))
         else:
             raise ValueError('Invalid q_mode: "%s"' % self.q_mode)
