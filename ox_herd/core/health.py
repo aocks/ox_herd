@@ -26,7 +26,7 @@ as _regr_test method for details.
 
     default_complain = ValueError
 
-    def __init__(self, complain=None, q_mode: str = 'q'):
+    def __init__(self, complain=None, q_mode: str = 's'):
         """Initializer.
 
         :param complain=None:  Optional callable which takes a single
@@ -299,7 +299,8 @@ This will enqueue directly if q_mode == 'q' and use a scheduler if
 the q_mode == 's'>
         """
         args = [return_true]
-        kwargs = {}
+        kwargs = {'job_ttl': 10*self.probe_time,
+                  'job_result_ttl': 20*self.probe_time}
         if self.q_mode == 'q':
             my_queue = Queue(self.qname, connection=Redis())
             launcher = my_queue.enqueue
