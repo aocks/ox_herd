@@ -306,8 +306,9 @@ the q_mode == 's'>
             launcher = my_queue.enqueue
         elif self.q_mode == 's':
             sched = Scheduler(queue_name=self.qname, connection=Redis())
-            launcher = sched.enqueue_in
-            args.insert(0, datetime.timedelta(seconds=1))
+            launcher = sched.cron
+            kwargs = {'kwargs': kwargs, 'cron_string' = '* * * * *',
+                      func=args.pop}
         else:
             raise ValueError('Invalid q_mode: "%s"' % self.q_mode)
         job = launcher(*args, **kwargs)
@@ -319,6 +320,7 @@ the q_mode == 's'>
         start = datetime.datetime.utcnow()
         job = self.queue_job()
         for keep_trying in [1, 1, 1, 1, 1, 0]:  # try 5 times
+            logging.info('Sleeping to wait for %s', job)
             time.sleep(self.probe_time + 1)
             now = datetime.datetime.utcnow()
             if (now - start).total_seconds() > self.probe_time:
