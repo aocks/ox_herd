@@ -306,9 +306,8 @@ the q_mode == 's'>
             launcher = my_queue.enqueue
         elif self.q_mode == 's':
             sched = Scheduler(queue_name=self.qname, connection=Redis())
-            launcher = sched.cron
-            kwargs = {'kwargs': kwargs, 'cron_string': '* * * * *',
-                      'func': args.pop()}
+            launcher = sched.enqueue_in
+            args.insert(0, datetime.timedelta(seconds=1))
         else:
             raise ValueError('Invalid q_mode: "%s"' % self.q_mode)
         job = launcher(*args, **kwargs)
