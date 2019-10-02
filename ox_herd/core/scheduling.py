@@ -46,18 +46,18 @@ class OxScheduler(object):
 
     @staticmethod
     def cleanup_job(job_id):
-        return #FIXME
+        return 'FIXME' #FIXME
         conn = Redis()
-        failed_queue = 'FIXME' #get_failed_queue(conn)
+        failed_queue = 'FIXME' #get_failed_queue(conn) was removed
         failed_queue.remove(job_id)
         return 'Removed job %s' % str(job_id)
 
 
     @staticmethod
     def requeue_job(job_id):
-        return #FIXME
+        return 'FIXME' #FIXME
         conn = Redis()
-        failed_queue = get_failed_queue(conn)
+        failed_queue = 'FIXME' #get_failed_queue(conn) was removed
         result = failed_queue.requeue(job_id)
         return result
 
@@ -120,9 +120,9 @@ class OxScheduler(object):
     @staticmethod
     def get_failed_jobs():
         results = []
-        return #FIXME
+        return [] #FIXME
         conn = Redis()
-        failed = get_failed_queue(conn)
+        failed = get_failed_queue(conn)  #FIXME; do my_queue.failed_job_registry.get_job_ids() ???
         failed_jobs = failed.jobs
         for item in failed_jobs:
             try:
