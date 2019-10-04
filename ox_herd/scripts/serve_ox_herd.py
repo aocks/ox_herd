@@ -31,6 +31,8 @@ def prepare_parser(parser):
         'enable the pytest plugin if it was not already enabled.'))
     parser.add_argument('--port', default=DEFAULT_PORT, help=(
         'IP port to listen on.'))
+    parser.add_argument('--health_token', default=None, help=(
+        'Health check token to use for /ox_hed/health_check route'))
     parser.add_argument('--base_url', help=(
         'Base URL to use for ox_herd site. This is usually automatically\n'
         'but you can override when testing.'))
@@ -62,6 +64,9 @@ def _do_setup(args):
     if len(plug_set) < len(plugin_list):
         raise ValueError('Duplicates in args.plugin = %s' % plugin_list)
     cur_plugs = set(ox_herd_settings.OX_PLUGINS)
+    if args.health_token:
+        ox_herd_settings.HEALTH_CHECK_TOKENS[
+            args.health_token] = 'set from cmd line'
 
     for item in plugin_list:
         if item not in cur_plugs:
@@ -70,6 +75,7 @@ def _do_setup(args):
         else:
             logging.info(
                 'Not adding plugin %s to OX_PLUGINS since already there.', item)
+
 
 def _setup_stub_login(app):
     conf_file = ox_herd_settings.OX_HERD_CONF
