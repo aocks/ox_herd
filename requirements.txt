@@ -11,12 +11,14 @@ pytest-xdist==1.15.0
 python-dateutil==2.5.3
 pytz==2016.7
 raven==5.32.0
-redis==2.10.5
+redis>=3.0
 requests==2.9.1
-rq==0.7.0
-rq-scheduler==0.7.0
+rq==1.1.0
+rq-dashboard==0.3.7
+rq-scheduler==0.9
 Markdown==2.6.8
 blinker==1.4
 passlib==1.7.1
 xmltodict==0.11.0
 eyap
+pyyaml
