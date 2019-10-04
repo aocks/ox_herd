@@ -301,8 +301,12 @@ the q_mode == 's'>
         args = [return_true]
         kwargs = {'job_ttl': 10*self.probe_time,
                   'job_result_ttl': 20*self.probe_time}
-        if self.q_mode == 'q':
+        if self.q_mode == 'q':  # Need to remove job_ for direct queue
             my_queue = Queue(self.qname, connection=Redis())
+            if 'job_ttl' in kwargs:
+                kwargs['ttl'] = kwargs.pop('job_ttl')
+            if 'job_result_ttl' in kwargs:
+                kwargs['result_ttl'] = kwargs.pop('job_result_ttl')
             launcher = my_queue.enqueue
         elif self.q_mode == 's':
             sched = Scheduler(queue_name=self.qname, connection=Redis())
