@@ -364,8 +364,10 @@ class RunPyTest(OxHerdTask, base.OxPluginComponent):
     def get_ox_task_cls(self):
         return self.__class__
 
-    def get_flask_form(self):
-        return forms.SchedJobForm
+    def get_flask_form_via_cls(cls):        
+        result = forms.SchedJobForm
+        logging.debug('Providing form %s for cls %s', result, cls)        
+        return result
 
     @classmethod
     def make_push_warn_task(cls, request, warnables=('refs/heads/master',)):
