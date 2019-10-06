@@ -46,20 +46,18 @@ class OxScheduler(object):
 
     @staticmethod
     def cleanup_job(job_id):
-        return 'FIXME' #FIXME
         conn = Redis()
-        failed_queue = 'FIXME' #get_failed_queue(conn) was removed
+        failed_queue = Queue("failed", connection=conn)
         failed_queue.remove(job_id)
         return 'Removed job %s' % str(job_id)
 
 
     @staticmethod
     def requeue_job(job_id):
-        return 'FIXME' #FIXME
-        conn = Redis()
-        failed_queue = 'FIXME' #get_failed_queue(conn) was removed
-        result = failed_queue.requeue(job_id)
-        return result
+        #FIXME: requeue_job got broken by update to rq.
+        #FIXME: need to re-implement
+        raise ValueError('Need to re-implement requeue_job')#FIXME
+
 
     @classmethod
     def launch_job(cls, job_id):
@@ -120,9 +118,8 @@ class OxScheduler(object):
     @staticmethod
     def get_failed_jobs():
         results = []
-        return [] #FIXME
         conn = Redis()
-        failed = get_failed_queue(conn)  #FIXME; do my_queue.failed_job_registry.get_job_ids() ???
+        failed = Queue("failed", connection=conn)
         failed_jobs = failed.jobs
         for item in failed_jobs:
             try:
