@@ -1,6 +1,8 @@
 """Module containing some plugin to run pytest.
 """
 
+import os
+import shutil
 import datetime
 import gzip
 import logging
@@ -56,17 +58,17 @@ class BackupPostgresToAWS(OxHerdTask, base.OxPluginComponent):
     """
 
     def __init__(self, *args, conn_string=None, prefix=None,
-                 bucket_name=None, timeout=1800, **kw):
+                 bucket_name=None, timeout=1800, **kwargs):
         """Initializer.
 
         :arg *args:    Argumnets to OxHerdTask.__init__.
 
         :arg conn_string:  Connection string to database.
 
-        :arg **kw:     Keyword arguments to OxHerdTask.__init__.
+        :arg **kwargs:     Keyword arguments to OxHerdTask.__init__.
 
         """
-        OxHerdTask.__init__(self, *args, **kw)
+        OxHerdTask.__init__(self, *args, **kwargs)
         self.conn_string = conn_string
         self.prefix = prefix
         self.bucket_name = bucket_name
@@ -95,25 +97,44 @@ override to pull from secret vault or something.
         rval = cls.backup_pion_db(ox_herd_task)
         return {'return_value': rval}
 
-    @staticmethod
-    def move_fd_to_s3(my_fd, bucket_name, remote_name, profile_name=None):
+    @classmethod
+    def move_file_to_s3(fname, bucket_name, remote_name, **botokw):
         """Move data in file descriptor to s3.
 
-        :param my_fd:        File descriptor with data.
+        :param fname:        Path to file to move.
 
-        :param profile_name=None:  Optional profile to use for S3.
+        :param bucket_name:  String name of S3 bucket. If this starts with
+                             '@' then we write to location bucket[1:] (this
+                             is useful for testing).
+
+        :param **botokw:  Keyword args for boto (e.g., profile, key, etc.).
 
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
         PURPOSE:  Move data in file descriptor to s3.
 
         """
-        session = boto3.Session(profile_name=profile_name)
-        s3_client = session.client('s3')
-        my_fd.seek(0)
-        s3_client.upload_file(
-            my_fd.name, bucket_name, remote_name)
+        if not bucket_name:
+            raise ValueError('Invalid bucket_name: "%s"' % str(bucket_name))
+        if bucket_name[0] == '@':
+            logging.info('Using local file location for bucket "%s"' % str(
+                bucket_name))
+            remote_name = os.path.join(bucket_name[1:], remote_name)
+            os.makedirs(os.path.dirname(remote_name))
+            shutil.copy(fname, remote_name)
+        else:
+            session = boto3.Session(**botokw)
+            s3_client = session.client('s3')
 
+            s3_client.upload_file(fname, bucket_name, remote_name)
+
+    @classmethod
+    def make_dump_cmdline(cls, ox_herd_task):
+        """Make command line to use to dump database.
+        """
+        return ['pg_dump', '-w', '--dbname=%s' % cls.get_conn_string(
+            ox_herd_task)]        
+        
     @classmethod
     def backup_pion_db(cls, ox_herd_task):
         """Do main work of backing up database to S3.
@@ -125,9 +146,9 @@ override to pull from secret vault or something.
                 'backup_%A.sql.gz'))
 
         with tempfile.NamedTemporaryFile(mode='wb') as my_fd:
+            logging.info('Using tempfile %s', getattr(my_fd, 'name', '?'))
             zipper = gzip.GzipFile(remote_name, 'wb', 9, my_fd)
-            cmd = ['pg_dump', '-w', '--dbname=%s' % cls.get_conn_string(
-                ox_herd_task)]
+            cmd = cls.make_dump_cmdline(ox_herd_task)
             logging.info('Dumping DB to temp file %s and then aws', my_fd.name)
             popen = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE,
@@ -140,9 +161,8 @@ override to pull from secret vault or something.
             if not written:
                 raise ValueError('Did not get any backup data')
 
-            # Note that on UNIX can just send my_fd.name but windows
-            # would need to use my_fd but boto seems stupid about that.
-            cls.move_fd_to_s3(my_fd, ox_herd_task.bucket_name, remote_name)
+            cls.move_file_to_s3(my_fd.name, ox_herd_task.bucket_name,
+                                remote_name)
 
         msgs = ['Finished backup succesfully\nStatus=%s\n%s bytes written.' % (
             status, written)]
