@@ -16,7 +16,7 @@
     <summary style="font-size:200%;">
       Jobs Currently Queued and Waiting to Run:
     </summary>
-    {% for job in queued %}
+    {% for job in (queued or []) %}
     <details>
       <summary>Job id : {{ job.id }}</summary>
       <UL>
@@ -40,7 +40,7 @@
     <summary style="font-size:200%;">
       Scheduled Jobs for queue "{{ qname }}":
     </summary>
-    {% for item in task_schedule %}
+    {% for item in (task_schedule or []) %}
     {% set oh_task = item.kwargs['ox_herd_task'] %}
     {% if oh_task.queue_name == qname %}
     {% include 'task_info.html' %}
@@ -54,7 +54,7 @@
     <summary style="font-size:200%;">
       Ignored jobs:
     </summary>
-    {% for item in task_schedule %}
+    {% for item in (task_schedule or []) %}
     {% set oh_task = item.kwargs['ox_herd_task'] %}
     {% if oh_task.queue_name not in queue_names %}
     {% include 'task_info.html' %}
@@ -67,7 +67,7 @@
 
 <div class="w3-light-grey w3-margin-bottom w3-panel">
   <details open><summary style="font-size:200%;">Failed jobs:</summary>
-    {% for item in failed_jobs %}
+    {% for item in (failed_jobs or []) %}
     {% include 'failed_job.html' %}
     {% endfor %}
   </details>

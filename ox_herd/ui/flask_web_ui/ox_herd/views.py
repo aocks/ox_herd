@@ -201,7 +201,7 @@ def use_plugin():
     if plugcomp not in compdict:
         return 'FIXME: component named %s not found' % plugcomp
     my_comp = compdict[plugcomp]
-    my_form_cls = my_comp.get_flask_form()
+    my_form_cls = my_comp.get_flask_form_via_cls()
     my_form = my_form_cls()
     if my_form.validate_on_submit():
         klass = my_comp.get_ox_task_cls()
@@ -228,7 +228,7 @@ def schedule_job():
     if my_args is None:
         raise ValueError("job %s had no kwargs['ox_herd_task']"%str(my_job))
     my_args = copy.deepcopy(my_args)
-    my_form_cls = my_args.get_flask_form()
+    my_form_cls = my_args.get_flask_form_via_cls()
     my_form = my_form_cls(obj=my_args)
 
     if my_form.validate_on_submit():

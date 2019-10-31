@@ -182,6 +182,9 @@ class RunPyLint(OxHerdTask, base.OxPluginComponent):
     def get_ox_task_cls(self):
         return self.__class__
 
-    def get_flask_form(self):
-        return forms.PylintForm
+    @classmethod
+    def get_flask_form_via_cls(cls):
+        result = forms.PylintForm        
+        logging.debug('Providing form %s for cls %s', result, cls)
+        return result
 

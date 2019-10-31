@@ -97,9 +97,47 @@ class OxPluginComponent(object):
         return self.__class__.__name__
 
     def get_flask_form(self):
-        """Return a sub-classs of GenericOxForm allowing user to configure  job.
+        """Like get_flask_form_via_cls but instance method (DEPRECATED)
 
-        Can return None if configuring job via Flask form not allowed.
+Basically, just use get_flask_form_via_cls unless you REALLY think
+you need `self`. If you really think you need `self`, then read below
+for reasons that you should consider.
+
+This get_flask_form method is just like the get_flask_form_via_cls
+method except that this method is DEPRECATED and
+get_flask_form_via_cls is preferred.
+
+In general, it is preferred to use get_flask_form_via_cls because the
+latter is a class method and can be called more easily since you do not
+need an instance. For example, if you want to be able to know what the
+parameters of a task are so that you can call it via a different
+interface (e.g., the command line) then you really don't want
+an INSTANCE of the task but just want to be able to ask the task CLASS
+what the possible input parameters are.
+
+By default, get_flask_form just calls get_flask_form_via_cls for
+backward compatability.
+        """
+        return self.get_flask_form_via_cls()
+
+    @classmethod
+    def get_flask_form_via_cls(cls):
+        """Return sub-classs of GenericOxForm allowing user to configure job.
+
+The get_flask_form_via_cls method will be called in various places when
+the user may want to be able to see a form to configure an instance of
+the job. The default is to return GenericOxForm, but users can override
+to return a subclass of GenericOxForm with their own form fields and
+behavior.
+
+It is desirable to return a form CLASS not an INSTANCE here for various
+reasons:
+
+  1. It is sometimes cleaner to have the class for pickling.
+  2. We may want the class so we can instaniate it and let the form
+     do something dynamic at instantiation time.
+
+This method can return None if configuring job via Flask form not allowed.
         """
         return GenericOxForm
 

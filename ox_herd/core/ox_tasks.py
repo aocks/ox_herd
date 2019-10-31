@@ -261,13 +261,15 @@ class OxHerdTask:
                   default we look for various generic fields as in the
                   generics argument as well as looking for fields from
                   self.get_flask_form() if that is defiend and returns
-                  something useful.
+                  something useful. Note that you should probably
+                  implement get_flask_form_via_cls not get_flask_form since
+                  get_flask_form will by default call get_flask_form_via_cls.
 
                   Sub-classes could override if desired.
         """
         result, found = [], {}
         generics = list(generics)
-        my_form_cls_maker = getattr(self, 'get_flask_form', None)
+        my_form_cls_maker = getattr(self, 'get_flask_form_via_cls', None)
         if my_form_cls_maker:
             my_form_cls = my_form_cls_maker()  # pylint: disable=not-callable
             my_form = my_form_cls()

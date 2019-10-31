@@ -1,11 +1,14 @@
 
-.PHONY: pypi help
+.PHONY: pypi help test
 
 help:
 	@echo "This is a makefile to push to pypi."
 	@echo "Use make pypi to push to pypi."
 
-pypi: README.rst
+test:
+	py.test --doctest-modules tests ox_herd
+
+pypi: README.rst test
 	 python3 setup.py sdist upload -r pypi
 
 README.rst: README.md
