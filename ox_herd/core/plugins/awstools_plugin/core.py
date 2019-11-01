@@ -98,7 +98,7 @@ override to pull from secret vault or something.
         return {'return_value': rval}
 
     @classmethod
-    def move_file_to_s3(fname, bucket_name, remote_name, **botokw):
+    def move_file_to_s3(cls, fname, bucket_name, remote_name, **botokw):
         """Move data in file descriptor to s3.
 
         :param fname:        Path to file to move.
