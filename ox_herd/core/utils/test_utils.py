@@ -10,6 +10,7 @@ import weakref
 import unittest
 import random
 
+from passlib.apps import custom_app_context as pwd_context
 
 import ox_herd
 
@@ -18,16 +19,17 @@ class ServerInfo:  # pylint: disable=too-few-public-methods
     """Information about an server running for testing.
     """
 
-    def __init__(self, server, port, health_token):
+    def __init__(self, server, port, health_token, stub_user=None):
         self.server = server
         self.port = port
         self.health_token = health_token
+        self.stub_user = stub_user
 
 
 def start_server(
         debug='1',     # Need debug 1 so we can use tests endpoint
         reloader='0',  # Need to use reload 0 to prevent flask weirdness
-        ox_port=None, cwd=None):
+        ox_port=None, cwd=None, stub_user=None):
     """Start flask server.
 
     :param debug='1':     Whether to run in debug mode.
@@ -39,6 +41,10 @@ def start_server(
 
     :param cwd=None:      Current working directory to run in. If None,
                           we run in ox_herd root.
+
+    :param stub_user=None:  Optional --stub_user argument (in the form
+                            of <user>:<passwd>) for stub db for testing.
+                            If None, we will randomly generate it.
 
     ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
@@ -60,9 +66,16 @@ def start_server(
     cwd = cwd if cwd else os.path.join(os.path.dirname(ox_herd.__file__))
     ox_port = ox_port if ox_port else str(find_free_port())
     cmd = [sys.executable, server_script, '--debug', str(debug),
-           '--port', ox_port, '--health_token', str(health_token)]
+           '--port', ox_port, '--health_token', str(health_token),
+           '--plugin', 'ox_herd.core.plugins.example_psutil_plugin']
+    if not stub_user:
+        stub_user = '%s:%s' % (
+            random.randint(0, 1e10), random.randint(0, 1e10))
+    cmd.extend(['--stub_user', '%s:%s' % (
+        stub_user.split(':')[0], pwd_context.hash(stub_user.split(':')[1]))])
     server = run_cmd(cmd=cmd, cwd=cwd, timeout=-4)
-    return ServerInfo(server, int(ox_port), health_token)
+    return ServerInfo(server, int(ox_port), health_token,
+                      stub_user=stub_user)
 
 
 def run_cmd(cmd, cwd=None, timeout=30):

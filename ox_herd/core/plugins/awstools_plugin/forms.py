@@ -12,3 +12,8 @@ class BackupForm(base.GenericOxForm):
     bucket_name = StringField(
         'bucket_name', [], description=(
             'Name of AWS bucket to put backup into.'))
+
+    bucket_name = StringField(
+        'prefix', [], default='misc', description=(
+            'Prefix to use in creating remote backup name.'))
+    

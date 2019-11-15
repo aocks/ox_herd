@@ -11,11 +11,13 @@ import markdown
 from flask import render_template, redirect, request, Markup, url_for, abort
 from flask_login import login_required
 
-from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP
+from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP, core
 from ox_herd.core import health
 from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db
 from ox_herd import settings
-from ox_herd.core.plugins import manager as plugin_manager
+from ox_herd.core.plugins import (
+    manager as plugin_manager, base as ox_herd_base)
+
 
 from collections import namedtuple
 def d_to_nt(dictionary):
@@ -221,15 +223,15 @@ def use_plugin():
 @OX_HERD_BP.route('/schedule_job', methods=['GET', 'POST'])
 @login_required
 def schedule_job():
-
+    """Schedule a job and configure its parameters.
+    """
     jid = request.args.get('jid', None)
     my_job = scheduling.OxScheduler.find_job(jid)
     my_args = my_job.kwargs.get('ox_herd_task', None)
     if my_args is None:
-        raise ValueError("job %s had no kwargs['ox_herd_task']"%str(my_job))
+        raise ValueError("job %s had no kwargs['ox_herd_task']" % str(my_job))
     my_args = copy.deepcopy(my_args)
-    my_form_cls = my_args.get_flask_form_via_cls()
-    my_form = my_form_cls(obj=my_args)
+    my_form = core.make_form_for_task(my_args)
 
     if my_form.validate_on_submit():
         my_form.populate_obj(my_args)
@@ -237,7 +239,7 @@ def schedule_job():
             my_args, 'manager', 'rq'))
         return redirect('%s?jid=%s' % (url_for('ox_herd.show_job'), job.id))
 
-    my_form.name.data += '_copy' # change name to add _copy if making new job
+    my_form.name.data += '_copy'  # change name to add _copy if making new job
 
     return render_template(
         'ox_wtf.html', form=my_form, title='Schedule Test',

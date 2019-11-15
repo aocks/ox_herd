@@ -36,6 +36,8 @@ def prepare_parser(parser):
     parser.add_argument('--base_url', help=(
         'Base URL to use for ox_herd site. This is usually automatically\n'
         'but you can override when testing.'))
+    parser.add_argument('--stub_user', help=(
+        'Username and password (as <user>:<passwd>) for stub db for tests.'))
     parser.add_argument('--logging', type=int, default=logging.INFO, help=(
         'Python logLevel. Use %i for DEBUG, %i for INFO, etc.' % (
             logging.DEBUG, logging.INFO)))
@@ -67,6 +69,9 @@ def _do_setup(args):
     if args.health_token:
         ox_herd_settings.HEALTH_CHECK_TOKENS[
             args.health_token] = 'set from cmd line'
+    if args.stub_user:
+        ox_herd_settings.STUB_USER_DB.update(dict([
+            args.stub_user.split(':')]))
 
     for item in plugin_list:
         if item not in cur_plugs:
