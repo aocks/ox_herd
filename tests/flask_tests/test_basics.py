@@ -33,3 +33,18 @@ class SimpleTest(test_utils.SelfContainedTest):
             'http://localhost:%i/ox_herd/health_check?%s' % (
                 self._serverInfo.port, params))
         self.assertEqual(expect_bad.status_code, 500)
+
+    def test_configure_job(self):
+        """Test that we can trigger job configuration without error.
+        """
+        session = requests.session()
+        session.post('http://localhost:%i/login' % (
+            self._serverInfo.port), dict(zip(
+                ['username', 'password'],
+                self._serverInfo.stub_user.split(':'))))
+        url = 'http://localhost:%i/ox_herd/use_plugin' % self._serverInfo.port
+        result = session.get(url, params={
+            'plugname': 'ox_herd.core.plugins.example_psutil_plugin',
+            'plugcomp': 'CheckCPU'})
+        self.assertEqual(result.reason, 'OK')
+        self.assertEqual(result.status_code, 200)
