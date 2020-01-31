@@ -117,8 +117,8 @@ override to pull from secret vault or something.
         if not bucket_name:
             raise ValueError('Invalid bucket_name: "%s"' % str(bucket_name))
         if bucket_name[0] == '@':
-            logging.info('Using local file location for bucket "%s"' % str(
-                bucket_name))
+            logging.info('Using local file location for bucket "%s"',
+                         bucket_name)
             remote_name = os.path.join(bucket_name[1:], remote_name)
             os.makedirs(os.path.dirname(remote_name))
             shutil.copy(fname, remote_name)
@@ -129,45 +129,69 @@ override to pull from secret vault or something.
             s3_client.upload_file(fname, bucket_name, remote_name)
 
     @classmethod
-    def make_dump_cmdline(cls, ox_herd_task):
+    def make_dump_cmdline(cls, ox_herd_task, outfile):
         """Make command line to use to dump database.
         """
-        return ['pg_dump', '-w', '--dbname=%s' % cls.get_conn_string(
-            ox_herd_task)]        
-        
+        return ['pg_dump', '-w', '-f', outfile, '--dbname=%s' % (
+            cls.get_conn_string(ox_herd_task))]
+
     @classmethod
     def backup_pion_db(cls, ox_herd_task):
         """Do main work of backing up database to S3.
         """
-        status = None
-        written = 0
+        msgs, status = [], None
         remote_name = 'postgres_backups/%s/%s' % (
             ox_herd_task.prefix, datetime.datetime.utcnow().strftime(
                 'backup_%A.sql.gz'))
 
-        with tempfile.NamedTemporaryFile(mode='wb') as my_fd:
-            logging.info('Using tempfile %s', getattr(my_fd, 'name', '?'))
-            zipper = gzip.GzipFile(remote_name, 'wb', 9, my_fd)
-            cmd = cls.make_dump_cmdline(ox_herd_task)
-            logging.info('Dumping DB to temp file %s and then aws', my_fd.name)
-            popen = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE,
-                                     universal_newlines=True)
-            for stdout_line in iter(popen.stdout.readline, ''):
-                written += zipper.write(bytes(stdout_line, 'utf8'))
-            popen.stdout.close()
-            status = popen.wait(timeout=ox_herd_task.timeout)
-            zipper.close()
-            if not written:
-                raise ValueError('Did not get any backup data')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outfile = os.path.join(tmpdir, 'dump.sql')
+            msgs.append(cls._do_dump(ox_herd_task, outfile))
 
-            cls.move_file_to_s3(my_fd.name, ox_herd_task.bucket_name,
+            with open(outfile, 'rb') as f_in:
+                with gzip.open(outfile + '.gz', 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+
+            cls.move_file_to_s3(outfile + '.gz', ox_herd_task.bucket_name,
                                 remote_name)
 
-        msgs = ['Finished backup succesfully\nStatus=%s\n%s bytes written.' % (
-            status, written)]
-        msgs.append(popen.stderr.read().strip())
-        if msgs[-1]:
-            msgs[-1] = 'Errors: %s' % str(msgs[-1])
+        msgs += ['Finished backup succesfully\nStatus=%s\n.' % (
+            status)]
 
         return '\n'.join(msgs)
+
+    @classmethod
+    def _do_dump(cls, ox_herd_task, outfile):
+        """
+
+        :param ox_herd_task:   Task controlling the dump.
+
+        :param outfile:        String path to output dump.
+
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+
+        :return:   String describing result of dump.
+
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+
+        PURPOSE:   Create a subprocess to dump to outfile.
+
+        """
+        cmd = cls.make_dump_cmdline(ox_herd_task, outfile)
+        logging.info('Running cmd: %s', str(cmd))
+        logging.info('Dumping DB to temp file %s and then aws',
+                     outfile)
+        popen = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        try:
+            status = popen.wait(timeout=ox_herd_task.timeout)
+        except subprocess.TimeoutExpired as prob:
+            logging.error('Timeout while trying to do backup: %s',
+                          str(prob))
+            raise
+        if status != 0:
+            msg = 'Got non-zero exist status %s; stderr=%s' % (
+                status, popen.stderr.read())
+            logging.error(msg)
+            raise ValueError(msg)
+        return 'Finished dump: extra messages="%s".' % (
+            popen.stderr.read())
