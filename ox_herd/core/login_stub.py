@@ -28,9 +28,19 @@ def on_load(state):
 
 class User(UserMixin):
 
-    def __init__(self, uname):
+    _userdict = {}
+
+    def __init__(self, uname, roles=None):
         self.id = uname
         self.name = uname
+        self.roles = roles if roles else []
+        self.__class__._userdict[self.id] = self
+
+    @classmethod
+    def load(cls, uid):
+        "Load user with given ID."
+        return cls._userdict[uid]
+
 
 @LOGIN_STUB_BP.route("/login", methods=["GET", "POST"])
 def login():
@@ -40,7 +50,7 @@ def login():
         password_hash = settings.STUB_USER_DB.get(username, 'disabled')
         if password_hash != 'disabled' and pwd_context.verify(
                 password, password_hash):
-            user = User(username)
+            user = User(username, settings.STUB_USER_ROLES.get(username, []))
             login_user(user)
             next_url = request.args.get("next", '')
             next_url = next_url if next_url.strip().lower() != 'none' else (
@@ -92,7 +102,7 @@ def logout():
 def load_user(userid):
     "Callback to reload the user object"
 
-    return User(userid)
+    return User.load(userid)
 
 
 
