@@ -1,7 +1,7 @@
 
 .PHONY: pypi help test
 
-PYTEST_EXTRA_FLAGS=""
+PYTEST_EXTRA_FLAGS=
 
 help:
 	@echo "This is a makefile to push to pypi."
