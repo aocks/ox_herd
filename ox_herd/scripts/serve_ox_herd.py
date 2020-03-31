@@ -9,6 +9,7 @@ import argparse
 import logging
 import os
 
+from passlib.apps import custom_app_context as pwd_context
 from flask import Flask, redirect, url_for
 from flask_login import LoginManager
 from flask_login import UserMixin, login_required
@@ -37,7 +38,11 @@ def prepare_parser(parser):
         'Base URL to use for ox_herd site. This is usually automatically\n'
         'but you can override when testing.'))
     parser.add_argument('--stub_user', help=(
-        'Username and password (as <user>:<passwd>) for stub db for tests.'))
+        'Comma separated <user>:<passwd>,<u2>:<p2>) for stub db for tests.'))
+    parser.add_argument('--stub_roles', help=(
+        'Username and comma separated roles (as <user>:role_1,role_2).'))
+    parser.add_argument('--hash_stub', type=int, default=1, help=(
+        'If 1, interpret password in stub_user as hash; if 0 as password.'))
     parser.add_argument('--logging', type=int, default=logging.INFO, help=(
         'Python logLevel. Use %i for DEBUG, %i for INFO, etc.' % (
             logging.DEBUG, logging.INFO)))
@@ -70,8 +75,11 @@ def _do_setup(args):
         ox_herd_settings.HEALTH_CHECK_TOKENS[
             args.health_token] = 'set from cmd line'
     if args.stub_user:
-        ox_herd_settings.STUB_USER_DB.update(dict([
-            args.stub_user.split(':')]))
+        _do_setup_stub_user(args)
+    if args.stub_roles:
+        ox_herd_settings.STUB_USER_ROLES.update({
+            args.stub_roles.split(':')[0]:
+            args.stub_roles.split(':')[1].split(',')})
 
     for item in plugin_list:
         if item not in cur_plugs:
@@ -80,6 +88,16 @@ def _do_setup(args):
         else:
             logging.info(
                 'Not adding plugin %s to OX_PLUGINS since already there.', item)
+
+
+def _do_setup_stub_user(args):
+    for group in args.stub_user.split(','):
+        username, password = group.split(':')
+        orig_pw = password
+        if not args.hash_stub:
+            password = pwd_context.hash(password)
+        print('-->%s:%s' % ({username: password}, orig_pw))#FIXME
+        ox_herd_settings.STUB_USER_DB.update({username: password})
 
 
 def _setup_stub_login(app):
