@@ -12,7 +12,7 @@ OX_HERD_CONF = os.environ.get('OX_HERD_CONF', os.path.join(
 # List of string roles from flask_security module allowed to access
 # the UI for ox_herd. If empty, then no role check is done.
 # WARNING: if you make OX_HERD_ROLES empty it makes ox_herd wide open.
-OX_HERD_ROLES = ['admin']
+OX_HERD_ROLES = ['admin', 'tasks']
 
 
 # Stub user database used only for testing stand alone ox_herd.
