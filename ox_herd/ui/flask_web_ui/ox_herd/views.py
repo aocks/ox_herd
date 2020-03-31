@@ -54,8 +54,15 @@ def index():
 def list_tasks():
     "Show list of tasks so you can inspect them."
 
-    tasks = ox_run_db.create().get_tasks()
-    return render_template('task_list.html', title='Task List', tasks=tasks)
+    my_db = ox_run_db.create()
+    limit = int(request.args.get('limit', 100))
+    start_utc = request.args.get('start_utc', None)
+    end_utc = request.args.get('end_utc', None)
+    tasks = my_db.get_tasks(start_utc=start_utc, end_utc=end_utc)    
+    total = len(tasks)    
+    tasks = my_db.limit_task_count(tasks, limit)
+    return render_template('task_list.html', title='Task List',
+                           tasks=tasks, total=total, limit=limit)
 
 
 @OX_HERD_BP.route('/show_task_log')
@@ -64,9 +71,11 @@ def show_task_log():
     "Show log of tasks run."
 
     run_db = ox_run_db.create()
-    start_utc=request.args.get('start_utc', None)
-    end_utc=request.args.get('end_utc', None)
+    start_utc = request.args.get('start_utc', None)
+    end_utc = request.args.get('end_utc', None)
+    limit = int(request.args.get('limit', 100))
     tasks = run_db.get_tasks(start_utc=start_utc, end_utc=end_utc)
+    tasks = run_db.limit_task_count(tasks, limit)
     other = []
     task_dict = collections.OrderedDict([('started', []), ('finished', [])])
     for item in reversed(sorted(
@@ -79,7 +88,7 @@ def show_task_log():
 
     return render_template(
         'task_log.html', title='Task log', start_utc=start_utc,
-        end_utc=end_utc, task_dict=task_dict)
+        end_utc=end_utc, task_dict=task_dict, limit=limit)
 
 
 @OX_HERD_BP.route('/show_task')

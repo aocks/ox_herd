@@ -4,6 +4,8 @@
 <div class="w3-light-grey w3-margin-bottom content">
   <p>Minimum task_start_utc = {{ start_utc }}</p>
   <p>Maximum task_end_utc = {{ end_utc }}</p>
+  <p>Maximum task count = {{ limit }} <p>
+  <p>Provide "?start_utc=YYYY-MM-DD" or "?end_utc=YYYY-MM-DD" or "?limit=N" to filter</p>
 </div>
 
 {% for my_status, task_list in task_dict.items() %}

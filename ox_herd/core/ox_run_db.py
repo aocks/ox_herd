@@ -83,7 +83,32 @@ class RunDB(object):
         """
         raise NotImplementedError
 
-    def get_tasks(self, status='finished', start_utc=None, end_utc=None):
+    def get_tasks(self, status='finished', start_utc=None, end_utc=None,
+                  max_count=None):
+        """Return list of TaskInfo objects.
+
+        :arg status='finished':   Status of tasks to search. Should be one
+                                  of entries from get_allowed_status().
+
+        :arg start_utc=None: String specifying minimum task_start_utc.
+
+        :arg end_utc=None:   String specifying maximum task_end_utc
+
+        :arg max_count=None: Optional integer for max items to return
+
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+
+        :returns:       List of TaskInfo objects.
+
+        ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+
+        PURPOSE:        Main way to get information about the tasks run.
+
+        """
+        raw_tasks = self._help_get_tasks(status, start_utc, end_utc)
+        return self.limit_task_count(raw_tasks, max_count)
+
+    def _help_get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
 
         :arg status='finished':   Status of tasks to search. Should be one
@@ -100,6 +125,7 @@ class RunDB(object):
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
         PURPOSE:        Main way to get information about the tasks run.
+                        Intended to be called by get_tasks.
 
         """
         raise NotImplementedError
@@ -113,12 +139,24 @@ class RunDB(object):
         """
         return ['started', 'finished']
 
+    @staticmethod
+    def limit_task_count(task_list, max_count=-1):
+        """Take list of TaskInfo items and returnt he last max_count items.
+        """
+        if max_count is None or max_count < 0 or len(task_list) < max_count:
+            return task_list
+        sorted_tl = list(sorted(
+            task_list, key=lambda item: (
+                item.task_end_utc if item.task_end_utc else
+                item.task_start_utc)))
+        return sorted_tl[-max_count:]
+
 
 class TaskInfo(object):
     """Python class to represent task info stored in database.
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
             self, task_id, task_name, task_start_utc=None,
             task_status=None, task_end_utc=None, return_value=None,
             json_data=None, pickle_data=None, template=None):
@@ -173,7 +211,7 @@ class RedisRunDB(RunDB):
                 really))
         my_keys = list(self.conn.scan_iter(match=self.my_prefix + '*'))
         if my_keys:
-            #names = ' '.join([item.decode('utf8') for item in my_keys])
+            #  names = ' '.join([item.decode('utf8') for item in my_keys])
             self.conn.delete(*my_keys)
 
     def record_task_start(self, task_name, template=None):
@@ -217,6 +255,8 @@ class RedisRunDB(RunDB):
         return task_info
 
     def get_task(self, task_id):
+        """Get the task with the given task_id and return it as TaskInfo.
+        """
         task_info = self.get_task_info(task_id)
         if task_info:
             return TaskInfo(**task_info)
@@ -244,7 +284,7 @@ class RedisRunDB(RunDB):
         task_key = self.task_master + task_id
         self.conn.set(task_key, json.dumps(task_info))
 
-    def get_tasks(self, status='finished', start_utc=None, end_utc=None):
+    def _help_get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
 
         :arg status='finished':   Status of tasks to search. Should be one
@@ -269,11 +309,14 @@ class RedisRunDB(RunDB):
             item_kw = json.loads(item_json.decode('utf8'))
             if not (status is None or item_kw['task_status'] == status):
                 continue
-            if not (start_utc is None or item_kw['start_utc'] >= start_utc):
+            if not (start_utc is None or item_kw.get(
+                    'task_start_utc', start_utc) >= start_utc):
                 continue
-            if not (end_utc is None or item_kw['end_utc'] <= end_utc):
+            if not (end_utc is None or item_kw.get(
+                    'task_end_utc', end_utc) <= end_utc):
                 continue
             result.append(TaskInfo(**item_kw))
+
         return result
 
     @staticmethod
@@ -302,6 +345,18 @@ Using random_key = ...
 1
 >>> len(db.get_tasks(None))
 2
+>>> db.record_task_finish(task_id, 'test_again')
+>>> t = db.get_tasks()
+>>> len(t)
+2
+>>> max_list = db.get_tasks(max_count=1)
+>>> len(max_list)
+1
+>>> max_list[0].task_name
+'test_again'
+
+Now cleanup
+
 >>> db.delete_all(really=True)
 >>> db.conn.keys(ox_run_db.ox_settings.REDIS_PREFIX + '*')
 []
@@ -401,7 +456,7 @@ class SqliteRunDB(RunDB):
 
         self.conn.commit()
 
-    def get_tasks(self, status='finished', start_utc=None, end_utc=None):
+    def _help_get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
 
         :arg status='finished':   Status of tasks to search. Should be one
@@ -450,6 +505,7 @@ class SqliteRunDB(RunDB):
 >>> assert not os.path.exists(db_file)
 
 """
+
 
 if __name__ == '__main__':
     doctest.testmod()

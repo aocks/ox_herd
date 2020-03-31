@@ -19,6 +19,7 @@
     {% for job in (queued or []) %}
     <details>
       <summary>Job id : {{ job.id }}</summary>
+      {% if job.kwargs and job.kwargs.ox_herd_task %}
       <UL>
 	<LI> Name : {{ job.kwargs['ox_herd_task'].name }}</LI>
 	<LI> Enqueued at : {{ job.enqueued_at }}</LI>
@@ -28,6 +29,9 @@
 	<LI> args : {{ job.args }}</LI>
 	<LI> kwargs : {{ job.kwargs }}</LI>
       </UL>
+      {% else %}
+      job missing "ox_herd_task" field: {{ job }}
+      {% endif %}
     </details>
     {% endfor %}
 </details>
