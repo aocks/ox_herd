@@ -232,7 +232,8 @@ class RedisRunDB(RunDB):
         info = TaskInfo(
             task_id, task_name, str(datetime.datetime.utcnow()),
             'started', template=template).to_json()
-        add_result = self.conn.set(task_key, info)
+        add_result = self.conn.setex(
+            task_key, ox_settings.OX_TASK_TTL, info)
         assert add_result, 'Got add_result = %s for %s; race condition?' % (
             add_result, task_id)
 
@@ -282,7 +283,8 @@ class RedisRunDB(RunDB):
         task_info['json_data'] = json_blob
         task_info['pickle_data'] = pickle_blob
         task_key = self.task_master + task_id
-        self.conn.set(task_key, json.dumps(task_info))
+        self.conn.setex(task_key,
+                        ox_settings.OX_TASK_TTL, json.dumps(task_info))
 
     def _help_get_tasks(self, status='finished', start_utc=None, end_utc=None):
         """Return list of TaskInfo objects.
@@ -328,6 +330,7 @@ class RedisRunDB(RunDB):
 Using random_key = ...
 >>> from ox_herd.core import ox_run_db
 >>> ox_run_db.ox_settings.REDIS_PREFIX += ('test_%s' % random_key)
+>>> ox_run_db.ox_settings.OX_TASK_TTL = 10
 >>> ignore = imp.reload(ox_run_db)
 >>> db = ox_run_db.RedisRunDB()
 >>> task_id = db.record_task_start('test')
@@ -354,6 +357,18 @@ Using random_key = ...
 1
 >>> max_list[0].task_name
 'test_again'
+
+Now verify that keys auto-expired in redis
+
+>>> for i in range(10):
+...     keys = db.conn.keys(ox_run_db.ox_settings.REDIS_PREFIX + '*')
+...     if not keys:
+...         break
+...     logging.info('Sleeping a bit waiting for keys to expire: %s', keys)
+...     time.sleep(2)
+... 
+>>> db.conn.keys(ox_run_db.ox_settings.REDIS_PREFIX + '*')
+[]
 
 Now cleanup
 

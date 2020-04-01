@@ -70,3 +70,6 @@ OX_PLUGINS = [
     'ox_herd.core.plugins.pylint_plugin',
     'ox_herd.core.plugins.example_psutil_plugin',
     ]
+
+# Time-To-Live field for records of ox_herd tasks kept in redis db
+OX_TASK_TTL = 86400 * 3
