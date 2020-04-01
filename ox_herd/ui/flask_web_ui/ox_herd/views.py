@@ -11,7 +11,7 @@ import markdown
 from flask import render_template, redirect, request, Markup, url_for, abort
 from flask_login import login_required
 
-from ox_herd.ui.flask_web_ui.ox_herd import OX_HERD_BP, core
+from ox_herd.ui.flask_web_ui.ox_herd import core
 from ox_herd.core import health
 from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db
 from ox_herd import settings
@@ -30,9 +30,21 @@ def delete_old_data(old_data):
         os.remove(old_file)
 
 
-@OX_HERD_BP.route('/')
-@OX_HERD_BP.route('/index')
-@OX_HERD_BP.route('/show_index')
+@core.ox_herd_route('/')
+@login_required
+def home():
+    'redirect to index'
+    return index()
+
+
+@core.ox_herd_route('/show_index')
+@login_required
+def show_index():
+    'redirect to index'
+    return index()
+
+
+@core.ox_herd_route('/index')
 @login_required
 def index():
     """Main page for ox_herd.
@@ -49,7 +61,7 @@ def index():
     return render_template('ox_herd/templates/intro.html', commands=commands)
 
 
-@OX_HERD_BP.route('/list_tasks')
+@core.ox_herd_route('/list_tasks')
 @login_required
 def list_tasks():
     "Show list of tasks so you can inspect them."
@@ -65,7 +77,7 @@ def list_tasks():
                            tasks=tasks, total=total, limit=limit)
 
 
-@OX_HERD_BP.route('/show_task_log')
+@core.ox_herd_route('/show_task_log')
 @login_required
 def show_task_log():
     "Show log of tasks run."
@@ -91,7 +103,7 @@ def show_task_log():
         end_utc=end_utc, task_dict=task_dict, limit=limit)
 
 
-@OX_HERD_BP.route('/show_task')
+@core.ox_herd_route('/show_task')
 @login_required
 def show_task():
     "Show information about a task."
@@ -114,7 +126,7 @@ def show_task():
             'generic_ox_task_result.html')
     return render_template(template, title='Task Report', task_data=task_data)
 
-@OX_HERD_BP.route('/show_scheduled')
+@core.ox_herd_route('/show_scheduled')
 @login_required
 def show_scheduled():
     queue_names = request.args.get('queue_names', settings.QUEUE_NAMES)
@@ -126,7 +138,7 @@ def show_scheduled():
                            queue_names=queue_names, failed_jobs=failed_jobs,
                            queued=queued)
 
-@OX_HERD_BP.route('/show_job')
+@core.ox_herd_route('/show_job')
 @login_required
 def show_job():
     jid = request.args.get('jid', None)
@@ -141,7 +153,7 @@ def show_job():
         return render_template('job_info.html', item=my_job)
 
 
-@OX_HERD_BP.route('/launch_job')
+@core.ox_herd_route('/launch_job')
 @login_required
 def launch_job():
     jid = request.args.get('jid', None)
@@ -153,7 +165,7 @@ def launch_job():
 
     return render_template('launch_job.html', jid=new_jid)
 
-@OX_HERD_BP.route('/cancel_job')
+@core.ox_herd_route('/cancel_job')
 @login_required
 def cancel_job():
     jid = request.args.get('jid', None)
@@ -163,7 +175,7 @@ def cancel_job():
         cancel = scheduling.OxScheduler.cancel_job(jid)
         return render_template('cancel_job.html', jid=jid, cancel=cancel)
 
-@OX_HERD_BP.route('/cleanup_job')
+@core.ox_herd_route('/cleanup_job')
 @login_required
 def cleanup_job():
     cleanup = None
@@ -173,7 +185,7 @@ def cleanup_job():
     return render_template('cleanup_job.html', jid=jid, cleanup=cleanup)
 
 
-@OX_HERD_BP.route('/requeue_job')
+@core.ox_herd_route('/requeue_job')
 @login_required
 def requeue_job():
     jid = request.args.get('jid', None)
@@ -183,7 +195,7 @@ def requeue_job():
 
 
 
-@OX_HERD_BP.route('/show_plugins')
+@core.ox_herd_route('/show_plugins')
 @login_required
 def show_plugins():
     actives = plugin_manager.PluginManager.get_active_plugins()
@@ -198,7 +210,7 @@ def show_plugins():
     return render_template('show_plugins.html', components=components)
 
 
-@OX_HERD_BP.route('/use_plugin', methods=['GET', 'POST'])
+@core.ox_herd_route('/use_plugin', methods=['GET', 'POST'])
 @login_required
 def use_plugin():
     plugname = request.args.get('plugname', '').strip()
@@ -229,7 +241,7 @@ def use_plugin():
                 'Form for component %s of plugin %s' % (plugcomp, plugname)))
 
 
-@OX_HERD_BP.route('/schedule_job', methods=['GET', 'POST'])
+@core.ox_herd_route('/schedule_job', methods=['GET', 'POST'])
 @login_required
 def schedule_job():
     """Schedule a job and configure its parameters.
@@ -256,7 +268,7 @@ def schedule_job():
             'fenced_code', 'tables'])))
 
 
-@OX_HERD_BP.route('/delete_task_from_db')
+@core.ox_herd_route('/delete_task_from_db')
 @login_required
 def delete_task_from_db():
     """Delete a task from the task database.
@@ -274,7 +286,7 @@ def delete_task_from_db():
         'Found no task_id so cannot do anything.'))
 
 
-@OX_HERD_BP.route('/health_check')
+@core.ox_herd_route('/health_check', noauth=True)
 def health_check():
     """Check if system and rq worker and scheduler are healthy.
 

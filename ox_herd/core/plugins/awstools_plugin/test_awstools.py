@@ -14,10 +14,10 @@ class TestableBackupTask(core.BackupPostgresToAWS):
     """
 
     @classmethod
-    def make_dump_cmdline(cls, ox_herd_task):
+    def make_dump_cmdline(cls, ox_herd_task, outfile):
         """Override to just cat file for dump to simplify testing.
         """
-        return ['cat', cls.get_conn_string(ox_herd_task)]
+        return ['cp', cls.get_conn_string(ox_herd_task), outfile]
 
     @staticmethod
     def get_conn_string(ox_herd_task):
@@ -40,7 +40,7 @@ def test_basic_operation():
             bucket_name='@'+backup_loc)
         result = task.main_call(task)
         assert result['return_value'].split()[:4] == [
-            'Finished', 'backup', 'succesfully', 'Status=0']
+            'Finished', 'dump:', 'extra', 'messages="b\'\'".']
     finally:
         for name in [db_loc]:
             if os.path.exists(name):

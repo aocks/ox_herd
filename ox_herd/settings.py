@@ -8,6 +8,13 @@ import random
 OX_HERD_CONF = os.environ.get('OX_HERD_CONF', os.path.join(
     os.environ.get('HOME', ''), '.ox_herd_conf'))
 
+
+# List of string roles from flask_security module allowed to access
+# the UI for ox_herd. If empty, then no role check is done.
+# WARNING: if you make OX_HERD_ROLES empty it makes ox_herd wide open.
+OX_HERD_ROLES = ['admin', 'tasks']
+
+
 # Stub user database used only for testing stand alone ox_herd.
 # You can either manually configure this to have keys as usernames
 # and password hashes created according to the following:
@@ -26,6 +33,10 @@ OX_HERD_CONF = os.environ.get('OX_HERD_CONF', os.path.join(
 # proper security instead of using the login stub but it is there for
 # ease of testing and local use.
 STUB_USER_DB = {}
+
+# Optional dict of username: list_of_roles (e.g., {'me': ['admin']}).
+# Useful in testing or simple usage with STUB_USER_DB.
+STUB_USER_ROLES = {}
 
 # Space separated list of queue names to show in showing scheduled tests.
 # Can be changed by your own software after importing settings if you like.
@@ -59,3 +70,6 @@ OX_PLUGINS = [
     'ox_herd.core.plugins.pylint_plugin',
     'ox_herd.core.plugins.example_psutil_plugin',
     ]
+
+# Time-To-Live field for records of ox_herd tasks kept in redis db
+OX_TASK_TTL = 86400 * 3

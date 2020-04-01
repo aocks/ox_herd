@@ -29,7 +29,7 @@ class ServerInfo:  # pylint: disable=too-few-public-methods
 def start_server(
         debug='1',     # Need debug 1 so we can use tests endpoint
         reloader='0',  # Need to use reload 0 to prevent flask weirdness
-        ox_port=None, cwd=None, stub_user=None):
+        ox_port=None, cwd=None, stub_user=None, stub_roles=None):
     """Start flask server.
 
     :param debug='1':     Whether to run in debug mode.
@@ -71,8 +71,10 @@ def start_server(
     if not stub_user:
         stub_user = '%s:%s' % (
             random.randint(0, 1e10), random.randint(0, 1e10))
-    cmd.extend(['--stub_user', '%s:%s' % (
-        stub_user.split(':')[0], pwd_context.hash(stub_user.split(':')[1]))])
+    if stub_roles:
+        cmd.extend(['--stub_roles', stub_roles])
+    cmd.extend(['--stub_user', stub_user, '--hash_stub', '0'])
+    print(cmd)
     server = run_cmd(cmd=cmd, cwd=cwd, timeout=-4)
     return ServerInfo(server, int(ox_port), health_token,
                       stub_user=stub_user)
