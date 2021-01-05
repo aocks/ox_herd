@@ -87,7 +87,10 @@ class OxScheduler(object):
                       for name in raw_task.rq_fields])
         if 'cron_string' in rq_kw:
             rq_kw.pop('cron_string')  # launching now so get rid of cron_string
-
+        if 'timeout' in rq_kw:
+            # After version 1.0, rq wants job_timeout not timeout
+            logging.info('Translating timeout to job_timeout in rq')
+            rq_kw['job_timeout'] = rq_kw.pop('timeout')
         queue_name = rq_kw.pop('queue_name')
         my_queue = rq.Queue(queue_name, connection=Redis())
         my_func = rq_kw.pop('func')
