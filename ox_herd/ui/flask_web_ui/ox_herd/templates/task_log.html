@@ -14,7 +14,10 @@
     <summary style="font-size:200%;">
       Tasks with status {{ my_status }} ({{task_list|count}} tasks)
     </summary>
-    <TABLE><TH>Task (Click row to expand)</TH><TH>End UTC</TH>
+    <TABLE>
+      <TH>Task (Click row to expand)</TH>
+      <TH>End UTC</TH>
+      <TH>Runtime</TH>
     {% for task in task_list %}
     {% if task.task_status == my_status or (
        (my_status == 'other' and task.task_status not in task_types)) %}
@@ -30,10 +33,13 @@
 	      <LI> End UTC: {{ task.task_end_utc }} </LI> 
 	      <LI> Return value: {{ task.return_value }} </LI> 
 	      <LI> Status : {{ task.task_status }} </LI>
+	      <LI> Runtime : {{ task.run_time() }} </LI>
 	    </UL>
 	  </details>
 	</TD>
 	<TD>{{task.task_end_utc}}</TD>
+	</TD>
+	<TD>{{task.run_time()}}</TD>
       </TR>
       {% endif %}
       {% endfor %}

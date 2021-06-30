@@ -151,6 +151,11 @@ class RunDB(object):
                 item.task_start_utc)))
         return sorted_tl[-max_count:]
 
+    def get_latest(self, task_name):
+        """Return task_info for most recent finished task with given task_name.
+        """
+        raise NotImplementedError
+
 
 class TaskInfo(object):
     """Python class to represent task info stored in database.
@@ -188,6 +193,26 @@ class TaskInfo(object):
         """Return json version of self.
         """
         return json.dumps(self.to_dict())
+
+    def run_time(self, round_to=2):
+        """Return total running time if possible (-1 if task not finished)
+        """
+        if not self.task_end_utc:
+            return -1
+        result = 'UNKNOWN'
+        try:
+            fmt = '%Y-%m-%d %H:%M:%S.%f'
+            end_utc_dt = datetime.datetime.strptime(
+                self.task_end_utc, fmt)
+            start_utc_dt = datetime.datetime.strptime(
+                self.task_start_utc, fmt)
+            result = (end_utc_dt - start_utc_dt).total_seconds()
+            result = round(result, round_to)
+        except Exception as problem:
+            logging.exception('Could not parse start/end time of %s: %s',
+                              self, problem)
+            result = 'E:%s' % str(problem)
+        return result
 
 
 class RedisRunDB(RunDB):
@@ -321,6 +346,22 @@ class RedisRunDB(RunDB):
 
         return result
 
+    def get_latest(self, task_name):
+        """Implementation of required get_latest method.
+
+The redis implementation of this is not very efficient and could be
+improved.
+        """
+        result = None
+        my_tasks = self._help_get_tasks()
+        for item in my_tasks:
+            if (item.task_name != task_name or item.task_status != 'finished'):
+                continue
+            if result is None or (
+                    item.task_end_utc > result.task_end_utc):
+                result = item
+        return result
+
     @staticmethod
     def _regr_test():
         """
@@ -366,7 +407,7 @@ Now verify that keys auto-expired in redis
 ...         break
 ...     logging.info('Sleeping a bit waiting for keys to expire: %s', keys)
 ...     time.sleep(2)
-... 
+...
 >>> db.conn.keys(ox_run_db.ox_settings.REDIS_PREFIX + '*')
 []
 
