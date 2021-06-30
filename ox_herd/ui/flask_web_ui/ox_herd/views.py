@@ -395,6 +395,15 @@ You can send a request with the following:
 def check_jobs():
     """Check if various jobs have been running.
 
+The following URL parameters can be provided:
+  - names:
+    - Comma separated list of names of tasks to check.
+  - seconds (default 3600)
+    - How many seconds are allowed since last completion of a job
+      named in the names parameter.
+
+If a job in names has not finished within the given seconds,
+then we complain.
     """
     my_db = ox_run_db.create()
     late_jobs = []
