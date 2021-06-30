@@ -215,6 +215,14 @@ class OxHerdTask:
             raise TypeError(
                 'call_result from main_call not str/dict/to_dict; got %s' % (
                     str(call_result)))
+        json_blob_dict = {}
+        if 'json_blob' in rval:
+            json_blob_dict = json.loads(rval.pop('json_blob'))
+        for name in list(rval):
+            if name not in ('task_id', 'return_value', 'status',
+                            'pickle_blob', 'call_result'):
+                json_blob_dict[name] = rval.pop(name)
+        rval['json_blob'] = json.dumps(json_blob_dict)
 
         rdb.record_task_finish(ox_herd_task.rdb_job_id, status=status, **rval)
 
