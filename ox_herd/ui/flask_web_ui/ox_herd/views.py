@@ -1,28 +1,31 @@
 """Views for ox_herd flask blueprint.
 """
 
+import datetime
 import copy
 import logging
 import os
 import collections
+from collections import namedtuple
+import json
 
 import markdown
 
-from flask import render_template, redirect, request, Markup, url_for, abort
-from flask_login import login_required
+from flask import (render_template, redirect, request, Markup, url_for, abort)
+from flask_login import login_required, current_user
 
 from ox_herd.ui.flask_web_ui.ox_herd import core
 from ox_herd.core import health
-from ox_herd.core import scheduling, simple_ox_tasks, ox_run_db
+from ox_herd.core import scheduling, ox_run_db
 from ox_herd import settings
 from ox_herd.core.plugins import (
     manager as plugin_manager, base as ox_herd_base)
 
 
-from collections import namedtuple
 def d_to_nt(dictionary):
     "Convert dictionaryt to namedtuple"
     return namedtuple('GenericDict', dictionary.keys())(**dictionary)
+
 
 def delete_old_data(old_data):
     for old_time, old_file in old_data:
@@ -55,8 +58,8 @@ def index():
     commands = collections.OrderedDict([
         (name, Markup('<A HREF="%s">%s</A>' % (
             url_for('ox_herd.%s' % name), name))) for name in [
-                'show_plugins', 'list_tasks', 'show_scheduled', 'show_task_log',
-                'cancel_job', 'cleanup_job']])
+                'show_plugins', 'list_tasks', 'show_scheduled',
+                'show_task_log', 'cancel_job', 'cleanup_job']])
 
     return render_template('ox_herd/templates/intro.html', commands=commands)
 
@@ -70,8 +73,8 @@ def list_tasks():
     limit = int(request.args.get('limit', 100))
     start_utc = request.args.get('start_utc', None)
     end_utc = request.args.get('end_utc', None)
-    tasks = my_db.get_tasks(start_utc=start_utc, end_utc=end_utc)    
-    total = len(tasks)    
+    tasks = my_db.get_tasks(start_utc=start_utc, end_utc=end_utc)
+    total = len(tasks)
     tasks = my_db.limit_task_count(tasks, limit)
     return render_template('task_list.html', title='Task List',
                            tasks=tasks, total=total, limit=limit)
@@ -114,9 +117,9 @@ def show_task():
         task_data = run_db.get_task(task_id)
         if not task_data:
             raise KeyError('No task with id %s' % str(task_id))
-    except Exception as problem:
+    except Exception as problem:  # pylint: disable=broad-except
         return render_template(
-            'generic_error.html',title='Could not find task',
+            'generic_error.html', title='Could not find task',
             commentary='Could not find task with id %s because %s' % (
                 task_id, problem))
 
@@ -125,6 +128,7 @@ def show_task():
         template and template.strip() and template != 'default') else (
             'generic_ox_task_result.html')
     return render_template(template, title='Task Report', task_data=task_data)
+
 
 @core.ox_herd_route('/show_scheduled')
 @login_required
@@ -138,6 +142,7 @@ def show_scheduled():
                            queue_names=queue_names, failed_jobs=failed_jobs,
                            queued=queued)
 
+
 @core.ox_herd_route('/show_job')
 @login_required
 def show_job():
@@ -148,8 +153,10 @@ def show_job():
         my_job = scheduling.OxScheduler.find_job(jid)
         ox_herd_task = getattr(my_job, 'kwargs', {}).get('ox_herd_task', None)
         if ox_herd_task is None:
-            raise ValueError('Job for id %s has no ox_herd_task (job is %s)' % (
-                jid, str(my_job))) # FIXME: should show nice error not raise
+            raise ValueError(
+                'Job for id %s has no ox_herd_task (job is %s)' % (
+                    jid,
+                    str(my_job)))  # FIXME: should show nice error not raise
         return render_template('job_info.html', item=my_job)
 
 
@@ -165,15 +172,17 @@ def launch_job():
 
     return render_template('launch_job.html', jid=new_jid)
 
+
 @core.ox_herd_route('/cancel_job')
 @login_required
 def cancel_job():
     jid = request.args.get('jid', None)
     if not jid:
         return render_template('cancel_job.html')
-    else:
-        cancel = scheduling.OxScheduler.cancel_job(jid)
-        return render_template('cancel_job.html', jid=jid, cancel=cancel)
+
+    cancel = scheduling.OxScheduler.cancel_job(jid)
+    return render_template('cancel_job.html', jid=jid, cancel=cancel)
+
 
 @core.ox_herd_route('/cleanup_job')
 @login_required
@@ -192,7 +201,6 @@ def requeue_job():
     if jid:
         requeue = scheduling.OxScheduler.requeue_job(jid)
     return render_template('requeue_job.html', jid=jid, requeue=requeue)
-
 
 
 @core.ox_herd_route('/show_plugins')
@@ -232,13 +240,13 @@ def use_plugin():
         my_form.populate_obj(info)
         job = scheduling.OxScheduler.add_to_schedule(info, info.manager)
         return redirect('%s?jid=%s' % (url_for('ox_herd.show_job'), job.id))
-    else:
-        template = my_comp.get_flask_form_template()
-        intro=Markup(markdown.markdown(my_form.__doc__, extensions=[
-            'fenced_code', 'tables']))
-        return render_template(
-            template, form=my_form, intro=intro, title=(
-                'Form for component %s of plugin %s' % (plugcomp, plugname)))
+
+    template = my_comp.get_flask_form_template()
+    intro = Markup(markdown.markdown(my_form.__doc__, extensions=[
+        'fenced_code', 'tables']))
+    return render_template(
+        template, form=my_form, intro=intro, title=(
+            'Form for component %s of plugin %s' % (plugcomp, plugname)))
 
 
 @core.ox_herd_route('/schedule_job', methods=['GET', 'POST'])
@@ -310,6 +318,116 @@ them (e.g., by doing sentry.capture or your own custom stuff).
     except Exception as problem:  # pylint: disable=broad-except
         logging.error('Problem in health_check: %s', str(problem))
         abort(500)
+
+
+@core.ox_herd_route('/get_latest/<task_name>')
+@login_required
+def get_latest(task_name):
+    """Get info on latest finished version of task named <task_name>
+
+If successful, you can do something like the folllowing to get
+the completion time of the latest task:
+
+   datetime.datetime.strptime(my_request.json()['task_end_utc'],
+      '%Y-%m-%d %H:%M:%S.%f')
+
+    """
+    task_result = ox_run_db.create().get_latest(task_name)
+    if task_result is None:
+        result = {}
+    else:
+        result = {n: getattr(task_result, n, None) for n in [
+            'task_id', 'task_name', 'task_start_utc', 'task_end_utc',
+            'return_value', 'json_data', 'pickle_data']}
+    return json.dumps(result), 200, {'ContentType': 'application/json'}
+
+
+def _check_health_token():
+    token = request.args.get('token', '')
+    if token not in settings.HEALTH_CHECK_TOKENS:
+        logging.warning('Invalid token "%s" for health check; abort',
+                        token)
+        return False
+    logging.info('Valid token for "%s" for health_check received',
+                 settings.HEALTH_CHECK_TOKENS[token])
+    return True
+
+
+@core.ox_herd_route('/record_finished_job', methods=['POST'], noauth=True)
+def record_finished_job():
+    """REST API endpoint to record that a job finished.
+
+You can send a request with the following:
+
+  - task_id:
+    - The id returned by record_started_job if you have called that.
+      If you have not called record_started_job and want to record
+      both start and finish in one go then omit this and provide
+      task_name instead (see below).
+  - task_name:
+    - If you have not already called record_started_job and just
+      want to record the start and finish of the job, then provide
+      a string name in task_name and omit task_id.
+  - return_value:
+    - Return value of running the task.
+    """
+    if current_user is None and not _check_health_token():
+        abort(403)
+    my_db = ox_run_db.create()
+    try:
+        record = json.loads(request.data)
+        task_id = record.get('task_id', None)
+        if task_id is None:
+            task_id = my_db.record_task_start(record['task_name'])
+            record.pop('task_name')
+            record['task_id'] = task_id
+        my_db.record_task_finish(**record)
+    except KeyError as problem:
+        return json.dumps({
+            'result': 'error',
+            'error': 'Could not find required value for "%s"' % str(
+                problem)}), 400, {'ContentType': 'application/json'}
+    return json.dumps({'result': 'success'}), 200, {
+        'ContentType': 'application/json'}
+
+
+@core.ox_herd_route('/check_jobs', noauth=True)
+def check_jobs():
+    """Check if various jobs have been running.
+
+    """
+    my_db = ox_run_db.create()
+    late_jobs = []
+    try:  # Use try block so return 500 if see an exception
+        if not _check_health_token():
+            abort(403)
+        seconds = int(request.args.get('seconds', '3600'))
+        name_list = request.args.get('names').split(',')
+        my_now = datetime.datetime.utcnow()
+        for name in name_list:
+            logging.info('Checking task "%s"', name)
+            latest = my_db.get_latest(name)
+            if not latest:
+                late_jobs.append((name, 'not found', 'N/A'))
+            else:
+                task_end_utc = datetime.datetime.strptime(
+                    str(latest.task_end_utc), '%Y-%m-%d %H:%M:%S.%f')
+                gap = (my_now - task_end_utc).total_seconds()
+                if gap > seconds:
+                    late_jobs.append((name, task_end_utc, gap))
+        if late_jobs:
+            msg = '\n'.join(['Found late jobs:'] + [
+                '%s: finished at %s which is %s > %s seconds late' % (
+                    name, task_end_utc, gap, seconds)
+                for (name, task_end_utc, gap) in late_jobs])
+            logging.error(msg)
+            return json.dumps({'result': 'error', 'error': msg}), 412, {
+                'ContentType': 'application/json'}
+    except Exception as problem:  # pylint: disable=broad-except
+        logging.error('Problem in health_check: %s', str(problem))
+        abort(500)
+    return json.dumps({'result': 'success'}), 200, {
+        'ContentType': 'application/json'}
 
 
 def message():
