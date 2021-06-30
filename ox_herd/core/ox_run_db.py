@@ -151,6 +151,11 @@ class RunDB(object):
                 item.task_start_utc)))
         return sorted_tl[-max_count:]
 
+    def get_latest(self, task_name):
+        """Return task_info for most recent finished task with given task_name.
+        """
+        raise NotImplementedError
+
 
 class TaskInfo(object):
     """Python class to represent task info stored in database.
@@ -319,6 +324,22 @@ class RedisRunDB(RunDB):
                 continue
             result.append(TaskInfo(**item_kw))
 
+        return result
+
+    def get_latest(self, task_name):
+        """Implementation of required get_latest method.
+
+The redis implementation of this is not very efficient and could be
+improved.
+        """
+        result = None
+        my_tasks = self._help_get_tasks()
+        for item in my_tasks:
+            if (item.task_name != task_name or item.task_status != 'finished'):
+                continue
+            if result is None or (
+                    item.task_end_utc > result.task_end_utc):
+                result = item
         return result
 
     @staticmethod
