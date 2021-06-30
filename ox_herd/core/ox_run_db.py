@@ -194,6 +194,26 @@ class TaskInfo(object):
         """
         return json.dumps(self.to_dict())
 
+    def run_time(self, round_to=2):
+        """Return total running time if possible (-1 if task not finished)
+        """
+        if not self.task_end_utc:
+            return -1
+        result = 'UNKNOWN'
+        try:
+            fmt = '%Y-%m-%d %H:%M:%S.%f'
+            end_utc_dt = datetime.datetime.strptime(
+                self.task_end_utc, fmt)
+            start_utc_dt = datetime.datetime.strptime(
+                self.task_start_utc, fmt)
+            result = (end_utc_dt - start_utc_dt).total_seconds()
+            result = round(result, round_to)
+        except Exception as problem:
+            logging.exception('Could not parse start/end time of %s: %s',
+                              self, problem)
+            result = 'E:%s' % str(problem)
+        return result
+
 
 class RedisRunDB(RunDB):
     """Implementation of RunDB with redis backend.
@@ -387,7 +407,7 @@ Now verify that keys auto-expired in redis
 ...         break
 ...     logging.info('Sleeping a bit waiting for keys to expire: %s', keys)
 ...     time.sleep(2)
-... 
+...
 >>> db.conn.keys(ox_run_db.ox_settings.REDIS_PREFIX + '*')
 []
 
