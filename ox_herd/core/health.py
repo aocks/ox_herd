@@ -221,7 +221,8 @@ as _regr_test method for details.
         """
         probe = ProbeQueue(probe_time, qname, sdict,
                            complain if complain else self.complain,
-                           q_mode=self.q_mode, success=success)
+                           q_mode=self.q_mode,
+                           success=(success if success else self.success))
         probe.daemon = True
         probe.start()
 
@@ -390,17 +391,21 @@ the q_mode == 's'>
         """
         start = datetime.datetime.utcnow()
         job = self.queue_job()
-        for keep_trying in [1, 1, 1, 1, 1, 0]:  # try 5 times
-            logging.info('Sleeping %s to wait for %s',
-                         (self.probe_time + 1), job)
-            time.sleep(self.probe_time + 1)
+        for keep_trying in ([15, 30, 90] + [  # do few checks after short waits
+                self.probe_time + 1] + [      # then wait given probe time
+                    0]):  #  the zero casues us to stop trying
+            logging.info('Sleeping %s to wait for %s', keep_trying, job)
+            time.sleep(keep_trying)
             now = datetime.datetime.utcnow()
-            if (now - start).total_seconds() > self.probe_time:
-                break
+            status = job.get_status()
+            if status == 'finished' or (
+                    now - start).total_seconds() > self.probe_time:
+                break  # either job done or waited too long already
             if not keep_trying:
                 self.issue_complaint(
-                    'Could not sleep for %s' % self.probe_time)
-        assert (now - start).total_seconds() > self.probe_time
+                    f"Couldn't sleep enough {self.probe_time} for job to end")
+        assert status == 'finished' or (
+            now - start).total_seconds() > self.probe_time
         status = job.get_status()
         if status != 'finished':
             msg = 'At UTC=%s, job %s launched at %s has status %s' % (
@@ -413,6 +418,8 @@ the q_mode == 's'>
         logging.info('Job %s completed with status %s', job, status)
         if self.success and self.success is not logging.info:
             self.success(f'Job {job} completed with status {status}')
+        else:
+            logging.info('No success callback configured for health check')
 
     def issue_complaint(self, msg: str):
         """Issue a complaint.
