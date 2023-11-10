@@ -7,12 +7,47 @@ import time
 import logging
 import datetime
 import threading
-
 import typing
+
+import requests
 
 from redis import Redis
 from rq import Queue, Worker
 from rq_scheduler import Scheduler
+
+
+class PostSuccess:
+    """Class to post to a URL on success.
+
+Can be provided for `success` argument to `ProbeQueue`.
+
+By doing something like
+
+    health.RQDoc.default_success = health.PostSuccess(
+            url='https://hc-ping.com/<your-key>/background-tasks',
+            headers={'User-Agent': 'ox_herd task monitoring'})
+
+you can make it so that when the ox_herd health check succeeds, it
+posts a message to hc-ping and use hc-piong to alert you if ox_herd
+stops responding.
+
+    """
+
+    def __init__(self, url: str, **request_kwargs):
+        """Initializer.
+
+        :param url:  String URL to POST to.
+
+        :param **request_kwargs:  Keyword arguments for requests.post
+
+        """
+        self.url = url
+        self.request_kwargs = dict(request_kwargs)
+
+    def __call__(self, msg: str):
+        result = requests.post(self.url, **self.request_kwargs)
+        logging.info('PostSuccess to %s returned results: %s',
+                     self.url, result.text)
 
 
 class RQDoc:
@@ -25,8 +60,10 @@ as _regr_test method for details.
     """
 
     default_complain = ValueError
+    default_success = logging.info
 
-    def __init__(self, complain=None, q_mode: str = 's'):
+    def __init__(self, complain=None, q_mode: str = 's',
+                 success=None):
         """Initializer.
 
         :param complain=None:  Optional callable which takes a single
@@ -46,14 +83,27 @@ as _regr_test method for details.
                                  - 'q':  Use queue directly so scheduler
                                          not checked.
 
+        :param success=None:   Optional callable which takes a single
+                               string argument describing successful
+                               result in probing a queue. See
+                               ProbeQueue class for details. This is used
+                               as default when we call self.launch_probe.
+
+                               If you provide None, then we use the value
+                               of the class variable default_success. This
+                               lets you change the default_success to affect
+                               global default behaviour.
+
         """
         self.complain = (
             complain if complain else self.__class__.default_complain)
+        self.success = (
+            success if success else self.__class__.default_success)
         self.q_mode = q_mode
 
     def check(self, probe_time: int,
               check_queues: typing.Union[str, typing.Sequence[str]],
-              complain: callable = None) -> str:
+              complain: callable = None, success=None) -> str:
         """Check liveness.
 
         :param probe_time:  Integer indicating how long to wait (in seconds)
@@ -65,6 +115,8 @@ as _regr_test method for details.
                               check for liveness.
 
         :param complain=None:  Passed to self.launch_probe.
+
+        :param success=None:  Passed to self.launch_probe.
 
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
@@ -84,7 +136,8 @@ as _regr_test method for details.
             if probe_time < 0:
                 raise ValueError('Cannot have negative probe_time')
             for qname in self.queue_name_list(check_queues):
-                self.launch_probe(probe_time, qname, sdict, complain)
+                self.launch_probe(probe_time, qname, sdict, complain,
+                                  success=success)
         return 'OK'
 
     @staticmethod
@@ -134,11 +187,11 @@ as _regr_test method for details.
                 queue_counts[qname] = 1 + queue_counts.get(qname, 0)
         for qname in self.queue_name_list(check_queues):
             if not queue_counts.get(qname, None):
-                raise ValueError('No workers found for queue "%s"' % qname)
+                raise ValueError(f'No workers found for queue "{qname}"')
         return 'OK'
 
     def launch_probe(self, probe_time: int, qname: str, sdict: dict,
-                     complain: callable = None):
+                     complain: callable = None, success=None):
         """Launch a probe into the given queue to verify things work.
 
         :param probe_time: Integer probe time > 0.
@@ -154,6 +207,10 @@ as _regr_test method for details.
                                in probing a queue and complains. If this
                                is None, we use self.complain.
 
+        :param success=None:   Optional callable which takes a single
+                               string argument describing succesful
+                               probe. If this is None, we use self.success.
+
         ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
 
         PURPOSE:  Create an instance of ProbeQueue and start it in
@@ -164,7 +221,7 @@ as _regr_test method for details.
         """
         probe = ProbeQueue(probe_time, qname, sdict,
                            complain if complain else self.complain,
-                           q_mode=self.q_mode)
+                           q_mode=self.q_mode, success=success)
         probe.daemon = True
         probe.start()
 
@@ -251,11 +308,13 @@ a live working queue.
 This needs to be a thread since if you are using this in a web server,
 then you may want your server to return a response and do the probe
 in the background as a separate thread which reports complaints
-via the `complain` argument passed to __init__.
+via the `complain` argument passed to __init__ and reports success
+via the `success` argument passed to __init__.
     """
 
     def __init__(self, probe_time: int, qname: str, sdict: dict,
-                 complain: callable, q_mode: str, *args, **kwargs):
+                 complain: callable, q_mode: str, *args, success=None,
+                 **kwargs):
         """Initializer.
 
         :param probe_time: Integer probe time > 0.
@@ -283,6 +342,12 @@ via the `complain` argument passed to __init__.
                                  - 'q':  Use queue directly so scheduler
                                          not checked.
 
+        :param success=None:   A callable which takes a single
+                               string argument describing successful probe.
+
+                               This method can be useful to ping something
+                               to indicate success.
+
         :param *args, **kwargs:   Passed to Thread.__init__.
         """
         self.probe_time = probe_time
@@ -290,6 +355,7 @@ via the `complain` argument passed to __init__.
         self.sdict = sdict
         self.complain = complain
         self.q_mode = q_mode
+        self.success = success
         super().__init__(*args, **kwargs)
 
     def queue_job(self):
@@ -345,6 +411,8 @@ the q_mode == 's'>
             self.issue_complaint(msg)
         self.sdict['status'] = 'good'
         logging.info('Job %s completed with status %s', job, status)
+        if self.success and self.success is not logging.info:
+            self.success(f'Job {job} completed with status {status}')
 
     def issue_complaint(self, msg: str):
         """Issue a complaint.
