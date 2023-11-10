@@ -76,7 +76,7 @@ typed-ast==1.4.0
 types-python-dateutil==2.8.19.14
 typing-extensions==3.10.0.0
 urllib3==1.25.8
-Werkzeug==0.16.0
+Werkzeug==3.0.1
 wrapt==1.11.2
 WTForms==2.2.1
 xmltodict==0.11.0
