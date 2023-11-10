@@ -2,7 +2,7 @@ Flask==0.11.1
 Flask-Login==0.3.2
 Flask-WTF==0.13.1
 parsedatetime==2.1
-psutil==5.2.2
+psutil==5.6.6
 pylint==1.7.1
 pytest==2.8.6
 GitPython==2.1.3
