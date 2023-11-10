@@ -391,8 +391,10 @@ the q_mode == 's'>
         """
         start = datetime.datetime.utcnow()
         job = self.queue_job()
-        for keep_trying in ([15, 30, 90] + [  # do few checks after short waits
-                self.probe_time + 1] + [      # then wait given probe time
+        for keep_trying in ([min(self.probe_time, 15),  # do few checks after
+                             min(self.probe_time, 30),  # short waits
+                             min(self.probe_time, 90)] + [  # then wait
+                                 self.probe_time + 1] + [  # given probe time
                     0]):  #  the zero casues us to stop trying
             logging.info('Sleeping %s to wait for %s', keep_trying, job)
             time.sleep(keep_trying)
