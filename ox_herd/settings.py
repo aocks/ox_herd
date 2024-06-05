@@ -1,6 +1,7 @@
 """Module to represent basic settings for ox_herd package.
 """
 
+import sys
 import os
 import random
 
@@ -58,7 +59,7 @@ REDIS_PREFIX = 'ox_herd:'
 # for things to work.
 # Format is HEALTH_CHECK_TOKENS[<token>] = <comment>
 HEALTH_CHECK_TOKENS = {
-    str(random.randint(0, 1e20)): 'default'
+    str(random.randint(0, sys.maxsize-2)): 'default'
     }
 
 # List of names of plugins to enable. Each "name" is a string which
