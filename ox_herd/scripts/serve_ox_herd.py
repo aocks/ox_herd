@@ -74,8 +74,6 @@ def _do_setup(args):
     if args.health_token:
         ox_herd_settings.HEALTH_CHECK_TOKENS[
             args.health_token] = 'set from cmd line'
-    if args.stub_user:
-        _do_setup_stub_user(args)
     if args.stub_roles:
         ox_herd_settings.STUB_USER_ROLES.update({
             args.stub_roles.split(':')[0]:
@@ -90,7 +88,9 @@ def _do_setup(args):
                 'Not adding plugin %s to OX_PLUGINS since already there.', item)
 
 
-def _do_setup_stub_user(args):
+def _do_setup_stub_user(args, app):
+    from ox_herd.core import login_stub
+    app.register_blueprint(login_stub.LOGIN_STUB_BP)
     for group in args.stub_user.split(','):
         username, password = group.split(':')
         orig_pw = password
@@ -100,7 +100,7 @@ def _do_setup_stub_user(args):
         ox_herd_settings.STUB_USER_DB.update({username: password})
 
 
-def _setup_stub_login(app):
+def _setup_stub_login(app, args=None):
     conf_file = ox_herd_settings.OX_HERD_CONF
     if os.path.exists(conf_file):
         from ox_herd.core import login_stub
@@ -116,6 +116,11 @@ def _setup_stub_login(app):
     else:
         logging.warning('Unable to find OX_HERD_CONF at %s',
                         ox_herd_settings.OX_HERD_CONF)
+
+    if args is not None and args.stub_user:
+        _do_setup_stub_user(args, app)
+        
+    logging.warning('URL rules:\n%s' % str(list(app.url_map.iter_rules())))
 
 
 def _serve(args):
@@ -139,7 +144,7 @@ def _serve(args):
     from ox_herd.ui.flask_web_ui import ox_herd
     from ox_herd.ui.flask_web_ui.ox_herd import views
     app.register_blueprint(ox_herd.OX_HERD_BP, url_prefix='/ox_herd')
-    _setup_stub_login(app)
+    _setup_stub_login(app, args)
 
     assert bool(settings['DEBUG']) == bool(args.debug), (
         'Inconsistent debug values from settings and args.')
