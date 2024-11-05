@@ -50,6 +50,54 @@ stops responding.
                      self.url, result.text)
 
 
+class ThresholdComplainer:
+    """Optional complaining callable to use in RQDoc.
+
+This class provides a callable which can track complaints over a period of time
+and only raise an exception once we have too many compalints in that period.
+
+An instance of this class can be passed as the `complain` argument to RQDoc.
+    """
+
+    def __init__(self, raise_threshold: int = 4,
+                 raise_lookback_seconds: float = 60*60*8):
+        """Initializer.
+
+        :param raise_threshold=4:  How many complaints to tolerate before raising
+                                   an exception.
+
+        :param raise_lookback_seconds=60*60*8:  Tracking period. We forget complaints
+                                                that happened more than this many
+                                                seconds ago.
+
+        """
+        self.raise_threshold = raise_threshold
+        self.raise_lookback_seconds = raise_lookback_seconds
+        self.error_list = []
+
+    def maybe_complain(self, msg):
+        """Track the given complaint in `msg`.
+        """
+        now = datetime.datetime.utcnow()
+        self.error_list.append((now, msg))
+        keep_idx = 0
+        while keep_idx < len(self.error_list) and ((
+                now - self.error_list[keep_idx][0]
+                ).total_seconds() >= self.raise_lookback_seconds):
+            logging.info('Forget about old complaint at index %i: %s',
+                         keep_idx, self.error_list[keep_idx])
+            keep_idx += 1
+        self.error_list = self.error_list[keep_idx:]
+        if len(self.error_list) > self.raise_threshold:
+            raise ValueError(f'Got {len(self.error_list)} complaints in lookback period'
+                             f'; latest: {msg}')
+        logging.warning('Tracking complaint %s but not enough to raise an error yet',
+                        msg)
+
+    def __call__(self, msg):
+        return self.maybe_complain(msg)
+
+
 class RQDoc:
     """Doctor to check on health of python rq services.
 
