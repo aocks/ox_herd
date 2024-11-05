@@ -412,18 +412,24 @@ then we complain.
             abort(403)
         seconds = int(request.args.get('seconds', '3600'))
         name_list = request.args.get('names').split(',')
+        skip_days = [int(i) for i in request.args.get('skip_days','').split(',')
+                     if i]
         my_now = datetime.datetime.utcnow()
-        for name in name_list:
-            logging.info('Checking task "%s"', name)
-            latest = my_db.get_latest(name)
-            if not latest:
-                late_jobs.append((name, 'not found', 'N/A'))
-            else:
-                task_end_utc = datetime.datetime.strptime(
-                    str(latest.task_end_utc), '%Y-%m-%d %H:%M:%S.%f')
-                gap = (my_now - task_end_utc).total_seconds()
-                if gap > seconds:
-                    late_jobs.append((name, task_end_utc, gap))
+        if my_now.weekday() in skip_days:
+            logging.info('Skip check since weekday now is %s in skip_days %s',
+                         my_now, skip_days)
+        else:
+            for name in name_list:
+                logging.info('Checking task "%s"', name)
+                latest = my_db.get_latest(name)
+                if not latest:
+                    late_jobs.append((name, 'not found', 'N/A'))
+                else:
+                    task_end_utc = datetime.datetime.strptime(
+                        str(latest.task_end_utc), '%Y-%m-%d %H:%M:%S.%f')
+                    gap = (my_now - task_end_utc).total_seconds()
+                    if gap > seconds:
+                        late_jobs.append((name, task_end_utc, gap))
         if late_jobs:
             msg = '\n'.join(['Found late jobs:'] + [
                 '%s: finished at %s which is %s > %s seconds late' % (
