@@ -2,13 +2,24 @@
 """
 
 import logging
+from functools import partial
 
 try: # try to import rq_scheduler and redis but allow other modes if fail
     import rq
+    import rq.job
     from rq.job import Job, UnpickleError
     from rq import Queue
     import rq_scheduler
     from redis import Redis
+    try:
+        import pickle5
+        logging.warning('pickle5 found so patching to protocol 4')
+        rq_scheduler.pickle = pickle5
+        rq.job.dumps = partial(pickle5.dumps, protocol=4)
+        rq.job.loads = pickle5.loads
+    except ImportError:
+        pass  # pickle5 not setup so no need to patch
+
 except Exception as problem:
     logging.error('Could not import rq_scheduler and redis because %s.\n%s',
                   str(problem), 'Continue with non-rq options.')
